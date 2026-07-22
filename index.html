@@ -854,6 +854,23 @@
                     </div>
 
                     <div class="bg-white/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white shadow-xl shadow-slate-200/40">
+                        <h3 class="text-xl font-black text-slate-800 mb-2 flex items-center gap-2">🧩 Clash 分流规则</h3>
+                        <p class="text-xs text-slate-500 mb-4 font-medium">仅影响 Clash / Mihomo 订阅（format=clash）。策略组可用 <code class="bg-slate-100 px-1 rounded">PROXY</code> / <code class="bg-slate-100 px-1 rounded">AUTO</code> / <code class="bg-slate-100 px-1 rounded">DIRECT</code> / <code class="bg-slate-100 px-1 rounded">REJECT</code>。带「规则集」的模板需客户端能访问 jsDelivr（Loyalsoldier）。</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <button v-for="tpl in clashRuleTemplates" :key="tpl.id" type="button" @click="applyClashRuleTemplate(tpl)" class="text-xs font-bold px-3 py-2 rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors" :title="tpl.description">{{ tpl.name }}</button>
+                            <button type="button" @click="resetClashRulesToDefault" class="text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors">恢复默认</button>
+                        </div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2 pl-1">rules</label>
+                        <textarea v-model="clashRulesInput" rows="8" spellcheck="false" class="w-full bg-white/70 border border-white p-3 rounded-2xl text-xs font-mono text-slate-700 leading-relaxed focus:bg-white" placeholder="- MATCH,PROXY"></textarea>
+                        <label class="block text-xs font-bold text-slate-400 mt-4 mb-2 pl-1">rule-providers（可选，映射体；空则不输出）</label>
+                        <textarea v-model="clashRuleProvidersInput" rows="6" spellcheck="false" class="w-full bg-white/70 border border-white p-3 rounded-2xl text-xs font-mono text-slate-700 leading-relaxed focus:bg-white" placeholder="reject:&#10;  type: http&#10;  behavior: domain&#10;  url: &quot;https://...&quot;"></textarea>
+                        <div class="mt-3 flex flex-wrap items-center gap-3">
+                            <button type="button" @click="saveClashRules" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-md">保存规则</button>
+                            <span class="text-[10px] text-slate-400 font-medium">rules {{ clashRulesSaved.length }}/{{ clashRulesMaxChars }} · providers {{ clashRuleProvidersSaved.length }}/{{ clashRuleProvidersMaxChars }}</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white shadow-xl shadow-slate-200/40">
                         <h3 class="text-xl font-black text-slate-800 mb-2 flex items-center gap-2">⚡ Realtime 状态频率策略</h3>
                         <p class="text-xs text-slate-500 mb-5 font-medium">全局影响所有 VPS 的 Core 与 Proxy Agent。节点配置、出口切换、应用结果、上线和掉线仍会立即推送。</p>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1048,6 +1065,21 @@
                 let publicRealtimeSocket = null; let publicRealtimeReconnectTimer = null; let publicRealtimeFallbackTimer = null; let publicRealtimeConnectTimer = null; let publicRealtimeActivityTimer = null; let publicRealtimeDisconnectedAt = 0; let publicRealtimeRetryDelay = 10000;
                 const newVps = ref({ name: '', ip: '', os: 'debian' }); const newNodeParams = reactive({}); const newUser = reactive({ username: '', password: '', traffic_limit_gb: '', expire_date: '' });
                 const mySubToken = ref(''); const siteTitle = ref(''); const siteTitleInput = ref(''); const userNewPassword = ref('');
+                const clashRulesInput = ref('- MATCH,PROXY');
+                const clashRulesSaved = ref('- MATCH,PROXY');
+                const clashRulesDefault = ref('- MATCH,PROXY');
+                const clashRuleProvidersInput = ref('');
+                const clashRuleProvidersSaved = ref('');
+                const clashRuleTemplates = ref([
+                    { id: 'full-proxy', name: '全量代理', description: '全部流量走 PROXY', rules: '- MATCH,PROXY', ruleProviders: '' },
+                    { id: 'lan-direct', name: '仅局域网直连', description: '私网直连', rules: '- GEOIP,PRIVATE,DIRECT,no-resolve\n- MATCH,PROXY', ruleProviders: '' },
+                    { id: 'bypass-cn', name: '绕过大陆', description: '私网+CN直连', rules: '- GEOIP,PRIVATE,DIRECT,no-resolve\n- GEOIP,CN,DIRECT\n- MATCH,PROXY', ruleProviders: '' },
+                    { id: 'loyalsoldier-classic', name: 'Loyalsoldier 经典', description: '需远程规则集', rules: '- RULE-SET,reject,REJECT\n- MATCH,PROXY', ruleProviders: '' },
+                    { id: 'gfw-list', name: 'GFWList 精简', description: '需远程规则集', rules: '- RULE-SET,gfw,PROXY\n- MATCH,PROXY', ruleProviders: '' },
+                    { id: 'adblock-cn', name: '广告拦截+绕过大陆', description: '需远程规则集', rules: '- RULE-SET,reject,REJECT\n- MATCH,PROXY', ruleProviders: '' },
+                ]);
+                const clashRulesMaxChars = ref(32768);
+                const clashRuleProvidersMaxChars = ref(24576);
                 const batchStartPort = reactive({}); const batchUser = reactive({}); 
                 const thirdPartySubscriptions = ref([]); const newThirdParty = reactive({ name: '', url: '' }); const loadingThirdParty = ref(false);
                 
@@ -1432,6 +1464,18 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         servers.value = (data.servers || []).map(item => { const live = liveByIp.get(normalizeRealtimeKey(item.ip)); return live && live._realtime_ts > Number(item.last_report || 0) ? { ...item, ...live } : item; }); nodes.value = data.nodes || []; users.value = data.users || [];
                         if (data.siteTitle) { siteTitle.value = data.siteTitle; siteTitleInput.value = data.siteTitle; }
                         if (data.mySubToken) mySubToken.value = data.mySubToken;
+                        if (typeof data.clashRules === 'string') {
+                            clashRulesInput.value = data.clashRules;
+                            clashRulesSaved.value = data.clashRules;
+                        }
+                        if (typeof data.clashRuleProviders === 'string') {
+                            clashRuleProvidersInput.value = data.clashRuleProviders;
+                            clashRuleProvidersSaved.value = data.clashRuleProviders;
+                        }
+                        if (typeof data.clashRulesDefault === 'string') clashRulesDefault.value = data.clashRulesDefault;
+                        if (Array.isArray(data.clashRuleTemplates) && data.clashRuleTemplates.length) clashRuleTemplates.value = data.clashRuleTemplates;
+                        if (Number.isFinite(Number(data.clashRulesMaxChars))) clashRulesMaxChars.value = Number(data.clashRulesMaxChars);
+                        if (Number.isFinite(Number(data.clashRuleProvidersMaxChars))) clashRuleProvidersMaxChars.value = Number(data.clashRuleProvidersMaxChars);
                         if (data.realtimeUrl && data.realtimeUrl !== realtimeUrl.value) { realtimeUrl.value = data.realtimeUrl; connectRealtime(); }
                         servers.value.forEach(s => { 
                             if(!newNodeParams[s.ip]) newNodeParams[s.ip] = { protocol: 'XTLS-Reality', port: 443, username: 'admin', sni: '', relay_type: 'external', target_ip: '', target_port: '', target_id: '', traffic_limit_gb: '', expire_date: '' };
@@ -1561,6 +1605,44 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const generateCmd = (ip) => { const osType = deployOsMap[ip] || 'debian'; const token = servers.value.find(s => s.ip === ip)?.agent_token || ''; if (!token) return '请先刷新页面以签发独立 Agent Token'; const scriptUrl = `${currentDomain}/api/agent_update?ip=${encodeURIComponent(ip)}&component=full-installer`; if (osType === 'alpine') return `apk update && apk add curl && curl -fsSL -H "Authorization: ${token}" "${scriptUrl}" | sh -s -- --api "${currentDomain}" --ip "${ip}" --token "${token}"`; else return `apt-get update -y && apt-get install -y curl && bash <(curl -fsSL -H "Authorization: ${token}" "${scriptUrl}") --api "${currentDomain}" --ip "${ip}" --token "${token}"`; };
 
                 const saveSiteTitle = async () => { if(!siteTitleInput.value) return alert('名称不能为空！'); await fetchApi('/api/settings', { method: 'POST', body: JSON.stringify({ site_title: siteTitleInput.value }) }); siteTitle.value = siteTitleInput.value; alert('✅ KUI 聚合面板名称保存成功！'); };
+                const applyClashRuleTemplate = (tpl) => {
+                    if (!tpl || typeof tpl.rules !== 'string') return;
+                    clashRulesInput.value = tpl.rules;
+                    clashRuleProvidersInput.value = typeof tpl.ruleProviders === 'string' ? tpl.ruleProviders : '';
+                };
+                const resetClashRulesToDefault = () => {
+                    clashRulesInput.value = clashRulesDefault.value || '- MATCH,PROXY';
+                    clashRuleProvidersInput.value = '';
+                };
+                const saveClashRules = async () => {
+                    const text = String(clashRulesInput.value ?? '');
+                    const providers = String(clashRuleProvidersInput.value ?? '');
+                    if (text.length > clashRulesMaxChars.value) return alert(`rules 过长，上限 ${clashRulesMaxChars.value} 字符`);
+                    if (providers.length > clashRuleProvidersMaxChars.value) return alert(`rule-providers 过长，上限 ${clashRuleProvidersMaxChars.value} 字符`);
+                    try {
+                        const res = await fetchApi('/api/settings', {
+                            method: 'POST',
+                            body: JSON.stringify({ clash_rules: text, clash_rule_providers: providers }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) return alert(data.error || '保存失败');
+                        if (typeof data.clashRules === 'string') {
+                            clashRulesInput.value = data.clashRules;
+                            clashRulesSaved.value = data.clashRules;
+                        } else {
+                            clashRulesSaved.value = text.trim() || (clashRulesDefault.value || '- MATCH,PROXY');
+                        }
+                        if (typeof data.clashRuleProviders === 'string') {
+                            clashRuleProvidersInput.value = data.clashRuleProviders;
+                            clashRuleProvidersSaved.value = data.clashRuleProviders;
+                        } else {
+                            clashRuleProvidersSaved.value = providers.trim();
+                        }
+                        alert('✅ Clash 分流规则已保存');
+                    } catch (error) {
+                        alert('Clash 分流规则保存失败，请重试。');
+                    }
+                };
                 const updateUserPassword = async () => { if(!userNewPassword.value) return alert('请输入新密码'); await fetchApi('/api/user/password', { method: 'PUT', body: JSON.stringify({ password: userNewPassword.value }) }); alert('✅ 密码修改成功！请使用新密码重新登录。'); logout(); };
                 const resetMySubLink = async () => { if(confirm('🚨 危险操作！重置后系统将为您签发全新的 UUID 订阅令牌，原链接将【立即作废】！确定要继续重置吗？')) { await fetchApi('/api/user/sub_token', { method: 'PUT' }); alert('✅ 订阅令牌已刷新！'); refreshData(); } };
                 
@@ -1800,7 +1882,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     servers, nodes, users, newVps, newNodeParams, newUser, 
                     login, logout, refreshData, addUser, toggleUser, deleteUser, resetUserTraffic, addVps, deleteVps, addNode, deleteNode, toggleNode, resetTraffic,
                     getNodesByIp, getVpsName, formatBytes, formatDate, getExpireText, getTrafficPercent, getPingColor, isOnline, generateCmd, generateSubLink, copyCommand,
-                    globalOnline, globalTraffic, globalSpeedIn, globalSpeedOut, deployOsMap, saveOsMap, siteTitle, siteTitleInput, saveSiteTitle, userNewPassword, updateUserPassword, resetMySubLink, generateUUIDForNewUser, batchStartPort, batchUser, deployAllProtocols,
+                    globalOnline, globalTraffic, globalSpeedIn, globalSpeedOut, deployOsMap, saveOsMap, siteTitle, siteTitleInput, saveSiteTitle, clashRulesInput, clashRulesSaved, clashRulesDefault, clashRuleProvidersInput, clashRuleProvidersSaved, clashRuleTemplates, clashRulesMaxChars, clashRuleProvidersMaxChars, applyClashRuleTemplate, resetClashRulesToDefault, saveClashRules, userNewPassword, updateUserPassword, resetMySubLink, generateUUIDForNewUser, batchStartPort, batchUser, deployAllProtocols,
                     probeSys, publicProbeServers, filteredProbeServers, probeView, probeDetailId, probeDetail, setProbeView, openProbeDetail, probeGlobalOnline, probeGlobalOffline, probeGlobalSpeedIn, probeGlobalSpeedOut, probeGlobalNetRx, probeGlobalNetTx, filteredProbeGroups, probeCountryStats, currentFilter,
                     saveProbeSettings, saveSubscriptionProtection, adminProbeServers, probeEditModalOpen, editingProbeNode, openProbeEditModal, saveProbeEdit, deleteProbeNode, currentDomain,
                     thirdPartySubscriptions, newThirdParty, loadingThirdParty, loadThirdPartySubscriptions, addThirdPartySubscription, toggleThirdPartySubscription, deleteThirdPartySubscription,
