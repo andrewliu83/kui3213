@@ -2,7 +2,7 @@
 kind: issue
 title: "Clash 订阅分流规则（文本 + 模板）"
 type: feature
-status: open
+status: closed
 created: 2026-07-22
 epic: ""
 ---
@@ -143,5 +143,17 @@ epic: ""
 
 ## 关闭回写
 
-- project spec：订阅导出能力补充可配置 clash rules
-- notes：无则跳过
+- project spec：`.cs/spec/index.md`（订阅导出能力、使用路径、边界、关键考量、术语、质量约束、证据索引）
+- notes：无
+- AGENTS.md / CLAUDE.md：无
+- tools：无
+
+## 关闭结论
+
+- 关闭判断：目标已实现——管理员可配置全局 Clash `rules` 与可选 `rule-providers`，内置 6 套模板（含 Loyalsoldier 远程集），`format=clash` 注入；空配置回退 `MATCH,PROXY`。范围未暗扩到 per-user / 可视化编辑器 / ACL4SSR 多策略组。
+- 验证摘要：
+  - 兼容性/可维护性：辅助函数本地单测 PASS；模板 id 与 providers 注入路径检查通过
+  - 信息安全性：仅 admin 经 settings 写；长度上限；未在服务端执行规则文本
+  - 未做：浏览器 E2E 与真实客户端导入（遗留，不阻塞关闭：生成路径与归一化已单测，线上需运维点一次确认）
+- 回写位置：`.cs/spec/index.md`；本文件 `001-o-` → `001-x-`
+- 遗留事项：部署后手动 E2E；若需要 AI/流媒体等多策略组或 per-user 规则，另开 issue/epic
