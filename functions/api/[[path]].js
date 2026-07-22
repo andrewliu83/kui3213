@@ -147,6 +147,302 @@ function yamlString(value) {
     return `"${String(value ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r?\n/g, '\\n')}"`;
 }
 
+const MAX_CLASH_RULES_CHARS = 32 * 1024;
+const MAX_CLASH_RULE_PROVIDERS_CHARS = 24 * 1024;
+
+const CLASH_RULES_DEFAULT = `- MATCH,PROXY`;
+
+// Loyalsoldier classic providers (community mainstream for Mihomo / Clash Meta).
+// Source convention: https://github.com/Loyalsoldier/clash-rules
+const LOYALSOLDIER_RULE_PROVIDERS = `reject:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+  path: ./ruleset/reject.yaml
+  interval: 86400
+private:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"
+  path: ./ruleset/private.yaml
+  interval: 86400
+apple:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt"
+  path: ./ruleset/apple.yaml
+  interval: 86400
+icloud:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt"
+  path: ./ruleset/icloud.yaml
+  interval: 86400
+google:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/google.txt"
+  path: ./ruleset/google.yaml
+  interval: 86400
+proxy:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"
+  path: ./ruleset/proxy.yaml
+  interval: 86400
+direct:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"
+  path: ./ruleset/direct.yaml
+  interval: 86400
+privateip:
+  type: http
+  behavior: ipcidr
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt"
+  path: ./ruleset/privateip.yaml
+  interval: 86400
+cncidr:
+  type: http
+  behavior: ipcidr
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt"
+  path: ./ruleset/cncidr.yaml
+  interval: 86400
+telegramcidr:
+  type: http
+  behavior: ipcidr
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/telegramcidr.txt"
+  path: ./ruleset/telegramcidr.yaml
+  interval: 86400`;
+
+const CLASH_RULE_TEMPLATES = [
+    {
+        id: 'full-proxy',
+        name: '全量代理',
+        description: '全部流量走 PROXY（历史默认，零外部依赖）',
+        rules: `- MATCH,PROXY`,
+        ruleProviders: '',
+    },
+    {
+        id: 'lan-direct',
+        name: '仅局域网直连',
+        description: '私网/链路本地直连，其余 PROXY（无远程规则集）',
+        rules: `- GEOIP,PRIVATE,DIRECT,no-resolve
+- IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+- IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+- IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+- IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+- IP-CIDR,169.254.0.0/16,DIRECT,no-resolve
+- IP-CIDR6,fc00::/7,DIRECT,no-resolve
+- IP-CIDR6,fe80::/10,DIRECT,no-resolve
+- MATCH,PROXY`,
+        ruleProviders: '',
+    },
+    {
+        id: 'bypass-cn',
+        name: '绕过大陆',
+        description: '私网 + CN GEOIP 直连，其余 PROXY（需客户端 GeoIP，无远程规则集）',
+        rules: `- GEOIP,PRIVATE,DIRECT,no-resolve
+- IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+- IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+- IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+- IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+- GEOIP,CN,DIRECT
+- MATCH,PROXY`,
+        ruleProviders: '',
+    },
+    {
+        id: 'loyalsoldier-classic',
+        name: 'Loyalsoldier 经典',
+        description: '广告拒绝 + 私有/国内直连 + 代理域名/电报 CIDR；需客户端能拉取 jsDelivr 规则集',
+        rules: `- RULE-SET,reject,REJECT
+- RULE-SET,private,DIRECT
+- RULE-SET,apple,DIRECT
+- RULE-SET,icloud,DIRECT
+- RULE-SET,google,PROXY
+- RULE-SET,proxy,PROXY
+- RULE-SET,direct,DIRECT
+- RULE-SET,privateip,DIRECT,no-resolve
+- RULE-SET,telegramcidr,PROXY,no-resolve
+- RULE-SET,cncidr,DIRECT,no-resolve
+- GEOIP,CN,DIRECT
+- MATCH,PROXY`,
+        ruleProviders: LOYALSOLDIER_RULE_PROVIDERS,
+    },
+    {
+        id: 'gfw-list',
+        name: 'GFWList 精简',
+        description: 'Loyalsoldier gfw 列表走代理，国内域名/IP 直连；需远程规则集',
+        rules: `- RULE-SET,private,DIRECT
+- RULE-SET,reject,REJECT
+- RULE-SET,gfw,PROXY
+- RULE-SET,direct,DIRECT
+- RULE-SET,privateip,DIRECT,no-resolve
+- RULE-SET,cncidr,DIRECT,no-resolve
+- GEOIP,CN,DIRECT
+- MATCH,PROXY`,
+        ruleProviders: `reject:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+  path: ./ruleset/reject.yaml
+  interval: 86400
+private:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"
+  path: ./ruleset/private.yaml
+  interval: 86400
+gfw:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt"
+  path: ./ruleset/gfw.yaml
+  interval: 86400
+direct:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"
+  path: ./ruleset/direct.yaml
+  interval: 86400
+privateip:
+  type: http
+  behavior: ipcidr
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt"
+  path: ./ruleset/privateip.yaml
+  interval: 86400
+cncidr:
+  type: http
+  behavior: ipcidr
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt"
+  path: ./ruleset/cncidr.yaml
+  interval: 86400`,
+    },
+    {
+        id: 'adblock-cn',
+        name: '广告拦截+绕过大陆',
+        description: 'reject 广告域名 + 私有/国内直连；需远程规则集',
+        rules: `- RULE-SET,reject,REJECT
+- RULE-SET,private,DIRECT
+- RULE-SET,direct,DIRECT
+- RULE-SET,privateip,DIRECT,no-resolve
+- RULE-SET,cncidr,DIRECT,no-resolve
+- GEOIP,CN,DIRECT
+- MATCH,PROXY`,
+        ruleProviders: `reject:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+  path: ./ruleset/reject.yaml
+  interval: 86400
+private:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"
+  path: ./ruleset/private.yaml
+  interval: 86400
+direct:
+  type: http
+  behavior: domain
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"
+  path: ./ruleset/direct.yaml
+  interval: 86400
+privateip:
+  type: http
+  behavior: ipcidr
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt"
+  path: ./ruleset/privateip.yaml
+  interval: 86400
+cncidr:
+  type: http
+  behavior: ipcidr
+  url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt"
+  path: ./ruleset/cncidr.yaml
+  interval: 86400`,
+    },
+];
+
+function normalizeClashRules(text, { allowEmpty = false } = {}) {
+    if (text == null) return allowEmpty ? '' : CLASH_RULES_DEFAULT;
+    if (typeof text !== 'string') return null;
+    if (text.length > MAX_CLASH_RULES_CHARS) return null;
+    let body = text.replace(/^﻿/, '').replace(/\r\n/g, '\n').trim();
+    if (!body) return allowEmpty ? '' : CLASH_RULES_DEFAULT;
+    // Accept either a bare rules list or a full "rules:" document fragment.
+    body = body.replace(/^rules:\s*\n?/i, '').trim();
+    if (!body) return allowEmpty ? '' : CLASH_RULES_DEFAULT;
+    const lines = body.split('\n').map(line => line.replace(/\s+$/g, ''));
+    const normalized = [];
+    for (const line of lines) {
+        if (!line.trim()) {
+            if (normalized.length) normalized.push('');
+            continue;
+        }
+        if (line.trimStart().startsWith('#')) {
+            normalized.push(line.startsWith('#') || line.startsWith(' ') ? line : line.trimStart());
+            continue;
+        }
+        const trimmed = line.trim();
+        if (trimmed.startsWith('- ')) normalized.push(trimmed);
+        else if (trimmed.startsWith('-')) normalized.push(`- ${trimmed.slice(1).trim()}`);
+        else normalized.push(`- ${trimmed}`);
+    }
+    while (normalized.length && normalized[normalized.length - 1] === '') normalized.pop();
+    return normalized.length ? normalized.join('\n') : (allowEmpty ? '' : CLASH_RULES_DEFAULT);
+}
+
+function normalizeClashRuleProviders(text, { allowEmpty = true } = {}) {
+    if (text == null || text === '') return allowEmpty ? '' : null;
+    if (typeof text !== 'string') return null;
+    if (text.length > MAX_CLASH_RULE_PROVIDERS_CHARS) return null;
+    let body = text.replace(/^﻿/, '').replace(/\r\n/g, '\n').trim();
+    if (!body) return allowEmpty ? '' : null;
+    body = body.replace(/^rule-providers:\s*\n?/i, '');
+    // Drop common accidental full-document wrappers; keep provider map only.
+    const lines = body.split('\n').map(line => line.replace(/\s+$/g, ''));
+    while (lines.length && !lines[0].trim()) lines.shift();
+    while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+    return lines.join('\n');
+}
+
+function clashRulesYamlBlock(rulesText) {
+    const normalized = normalizeClashRules(rulesText) || CLASH_RULES_DEFAULT;
+    return normalized
+        .split('\n')
+        .map(line => (line ? `  ${line}` : ''))
+        .join('\n');
+}
+
+function clashRuleProvidersYamlSection(providersText) {
+    const body = normalizeClashRuleProviders(providersText, { allowEmpty: true }) || '';
+    if (!body.trim()) return '';
+    const indented = body
+        .split('\n')
+        .map(line => (line.trim() ? `  ${line}` : ''))
+        .join('\n');
+    return `\nrule-providers:\n${indented}\n`;
+}
+
+async function loadClashRules(db) {
+    try {
+        const row = await db.prepare("SELECT val FROM sys_config WHERE key = 'clash_rules'").first();
+        if (row && typeof row.val === 'string' && row.val.trim()) {
+            return normalizeClashRules(row.val) || CLASH_RULES_DEFAULT;
+        }
+    } catch (e) {}
+    return CLASH_RULES_DEFAULT;
+}
+
+async function loadClashRuleProviders(db) {
+    try {
+        const row = await db.prepare("SELECT val FROM sys_config WHERE key = 'clash_rule_providers'").first();
+        if (row && typeof row.val === 'string' && row.val.trim()) {
+            return normalizeClashRuleProviders(row.val, { allowEmpty: true }) || '';
+        }
+    } catch (e) {}
+    return '';
+}
+
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
@@ -1507,6 +1803,8 @@ export async function onRequest(context) {
         if (format === 'clash') {
             const proxyGroupList = proxyNames.length > 0 ? proxyNames.map(n => `      - ${n}`).join('\n') : '      - DIRECT';
             const hasIPv6 = results.some(n => /:/.test(n.vps_ip)) || clashProxies.some(p => /server:\s*["']?\[/.test(p));
+            const clashRulesBlock = clashRulesYamlBlock(await loadClashRules(db));
+            const clashRuleProvidersSection = clashRuleProvidersYamlSection(await loadClashRuleProviders(db));
             const clashYaml = `port: 7890
 socks-port: 7891
 allow-lan: true
@@ -1514,7 +1812,7 @@ mode: rule
 log-level: info
 ipv6: ${hasIPv6 ? 'true' : 'false'}
 external-controller: 127.0.0.1:9090
-
+${clashRuleProvidersSection}
 proxies:
 ${clashProxies.join('\n')}
 
@@ -1532,7 +1830,7 @@ ${proxyGroupList}
 ${proxyGroupList}
 
 rules:
-  - MATCH,PROXY
+${clashRulesBlock}
 `;
             return new Response(clashYaml, { 
                 headers: { 
@@ -1597,11 +1895,29 @@ rules:
             }
             else { const u = await db.prepare("SELECT sub_token FROM users WHERE username = ?").bind(currentUser).first(); if(u && u.sub_token) mySubToken = u.sub_token; }
             const realtime = await db.prepare("SELECT val FROM sys_config WHERE key = 'realtime_url'").first();
-            return Response.json({ servers, nodes, users, siteTitle, mySubToken, realtimeUrl: env.REALTIME_URL || realtime && realtime.val || '' });
+            const clashRules = isAdmin ? await loadClashRules(db) : undefined;
+            const clashRuleProviders = isAdmin ? await loadClashRuleProviders(db) : undefined;
+            return Response.json({
+                servers,
+                nodes,
+                users,
+                siteTitle,
+                mySubToken,
+                realtimeUrl: env.REALTIME_URL || realtime && realtime.val || '',
+                ...(isAdmin ? {
+                    clashRules,
+                    clashRuleProviders,
+                    clashRuleTemplates: CLASH_RULE_TEMPLATES,
+                    clashRulesDefault: CLASH_RULES_DEFAULT,
+                    clashRulesMaxChars: MAX_CLASH_RULES_CHARS,
+                    clashRuleProvidersMaxChars: MAX_CLASH_RULE_PROVIDERS_CHARS,
+                } : {}),
+            });
         }
-        
+
         if (action === "settings" && method === "POST" && isAdmin) {
-            const { site_title, realtime_url } = await request.json();
+            const body = await request.json();
+            const { site_title, realtime_url, clash_rules, clash_rule_providers } = body || {};
             const statements = [];
             if (typeof site_title === 'string' && site_title.trim()) statements.push(db.prepare("INSERT OR REPLACE INTO sys_config (key, val, ts) VALUES ('site_title', ?, ?)").bind(site_title.trim(), Date.now()));
             if (typeof realtime_url === 'string') {
@@ -1609,9 +1925,36 @@ rules:
                 if (normalized && !/^https:\/\//i.test(normalized)) return Response.json({ error: 'realtime_url must use https' }, { status: 400 });
                 statements.push(db.prepare("INSERT OR REPLACE INTO sys_config (key, val, ts) VALUES ('realtime_url', ?, ?)").bind(normalized, Date.now()));
             }
+            if (Object.prototype.hasOwnProperty.call(body || {}, 'clash_rules')) {
+                if (typeof clash_rules !== 'string') return Response.json({ error: 'clash_rules must be a string' }, { status: 400 });
+                if (clash_rules.length > MAX_CLASH_RULES_CHARS) return Response.json({ error: `clash_rules exceeds ${MAX_CLASH_RULES_CHARS} characters` }, { status: 400 });
+                const normalizedRules = normalizeClashRules(clash_rules, { allowEmpty: true });
+                if (normalizedRules === null) return Response.json({ error: 'Invalid clash_rules' }, { status: 400 });
+                if (!normalizedRules || normalizedRules === CLASH_RULES_DEFAULT) {
+                    statements.push(db.prepare("DELETE FROM sys_config WHERE key = 'clash_rules'"));
+                } else {
+                    statements.push(db.prepare("INSERT OR REPLACE INTO sys_config (key, val, ts) VALUES ('clash_rules', ?, ?)").bind(normalizedRules, Date.now()));
+                }
+            }
+            if (Object.prototype.hasOwnProperty.call(body || {}, 'clash_rule_providers')) {
+                if (typeof clash_rule_providers !== 'string') return Response.json({ error: 'clash_rule_providers must be a string' }, { status: 400 });
+                if (clash_rule_providers.length > MAX_CLASH_RULE_PROVIDERS_CHARS) return Response.json({ error: `clash_rule_providers exceeds ${MAX_CLASH_RULE_PROVIDERS_CHARS} characters` }, { status: 400 });
+                const normalizedProviders = normalizeClashRuleProviders(clash_rule_providers, { allowEmpty: true });
+                if (normalizedProviders === null) return Response.json({ error: 'Invalid clash_rule_providers' }, { status: 400 });
+                if (!normalizedProviders.trim()) {
+                    statements.push(db.prepare("DELETE FROM sys_config WHERE key = 'clash_rule_providers'"));
+                } else {
+                    statements.push(db.prepare("INSERT OR REPLACE INTO sys_config (key, val, ts) VALUES ('clash_rule_providers', ?, ?)").bind(normalizedProviders, Date.now()));
+                }
+            }
             if (!statements.length) return Response.json({ error: 'No supported settings supplied' }, { status: 400 });
             await db.batch(statements);
-            return Response.json({ success: true });
+            const responseBody = { success: true };
+            if (Object.prototype.hasOwnProperty.call(body || {}, 'clash_rules') || Object.prototype.hasOwnProperty.call(body || {}, 'clash_rule_providers')) {
+                responseBody.clashRules = await loadClashRules(db);
+                responseBody.clashRuleProviders = await loadClashRuleProviders(db);
+            }
+            return Response.json(responseBody);
         }
         if (action === "user" && params.path[1] === "password" && method === "PUT") { const { password } = await readJsonBody(request, 8 * 1024); if (isAdmin) return Response.json({error: "管理员密码受绝对安全保护，仅可通过 Cloudflare Pages 环境变量修改！"}, {status: 400}); if (String(password || '').length < 12) return Response.json({ error: 'Password must be at least 12 characters' }, { status: 400 }); await db.prepare("UPDATE users SET password = ? WHERE username = ?").bind(await passwordHash(password), currentUser).run(); return Response.json({ success: true }); }
         if (action === "user" && params.path[1] === "sub_token" && method === "PUT") { const newToken = crypto.randomUUID(); if (isAdmin) await db.prepare("INSERT OR REPLACE INTO sys_config (key, val, ts) VALUES ('admin_sub_token', ?, ?)").bind(newToken, Date.now()).run(); else await db.prepare("UPDATE users SET sub_token = ? WHERE username = ?").bind(newToken, currentUser).run(); return Response.json({ success: true, token: newToken }); }
