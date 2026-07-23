@@ -1,0 +1,1368 @@
+{
+  "schema": "comet.native.content-snapshot-projection.v1",
+  "origin": "explicit",
+  "capture": {
+    "provider": "git"
+  },
+  "complete": true,
+  "limits": {
+    "maxFiles": 10000,
+    "maxFileBytes": 5242880,
+    "maxTotalBytes": 67108864,
+    "maxManifestBytes": 1048576
+  },
+  "entries": [
+    {
+      "path": ".agents/skills/brainstorming/SKILL.md",
+      "hash": "e14914605f640e0841758e45d0ab2a53243b59b921f929e47921c99668f2e61d",
+      "size": 10435,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/brainstorming/scripts/frame-template.html",
+      "hash": "6a8a4e58bd6a44b904e2e3c57de774481d909204597e1498de53f1b2fecc4c4e",
+      "size": 8094,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/brainstorming/scripts/helper.js",
+      "hash": "43c6d69954a46ec34a2a262bcc62a9a7e83e839c739f199cb72646d397c686e3",
+      "size": 5615,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/brainstorming/scripts/server.cjs",
+      "hash": "2d2961ea8d11f56c5f4c3a1a68d22709efa5d7601a2246d8c880774e7e9e8412",
+      "size": 25693,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/brainstorming/scripts/start-server.sh",
+      "hash": "a4e5ae84275bcaacd2f84345afeabe59cf7b00ba080e123da7cc1fb226f12847",
+      "size": 6908,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/brainstorming/scripts/stop-server.sh",
+      "hash": "0b5ccbbd57f62d3ed88993f7940b5ee0e5c0fc9b21c550c623da4f6292e47daf",
+      "size": 3263,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/brainstorming/spec-document-reviewer-prompt.md",
+      "hash": "95a0a195de9d984be2fffa95bab16fc8c563bc296a9cfc5e9c29cb3ece0d7457",
+      "size": 1747,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/brainstorming/visual-companion.md",
+      "hash": "3321a044c777d03d7177df41c77bb83155ff2a6d0c16b8a3d752426d29f14ea8",
+      "size": 13084,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/SKILL.md",
+      "hash": "49d907f2813e5912159022d0c58d5db9c43843f70f655b527cd4026cea924245",
+      "size": 7986,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/reference/authored-zone-example.md",
+      "hash": "440f1e4ef3f9ba2404110ed0a220492b0c902e5f4ed8a0346be69eedaf2e6a08",
+      "size": 8362,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/reference/authoring-subagents.md",
+      "hash": "6fbbee8ceb9c3fd7844e9d9f9336f8cbc1e3d79b7f318120498d23eb35512b11",
+      "size": 6534,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/reference/bundle-authoring.md",
+      "hash": "5c3199221e608b20f70e4ebc06c44b1a82b848af3740c069aa1c8a29ee77e500",
+      "size": 6432,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/reference/eval-provider.md",
+      "hash": "5998c9588c18dc52413f73a7b2ed50d28081e682f2a28b4ba44018c448d61e5b",
+      "size": 3218,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/reference/subagents/pause-points-author.md",
+      "hash": "543a34062573b5e6f8c47e37650cb450cf81edde4c618ef346f4fc079a076f75",
+      "size": 4515,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/reference/subagents/reference-author.md",
+      "hash": "6ded3e85ef29003236a78d82bed92100f851e1928857bc7ae29c2258ff7cc733",
+      "size": 3273,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/reference/subagents/script-author.md",
+      "hash": "c54904e095445b02ba8ef0e6ca21253aa980193a7feaf7c715b1eea85550b4aa",
+      "size": 3785,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/reference/subagents/skill-core-author.md",
+      "hash": "84ef68efec0e7b708f09ce5988575a087b63089b38849ef394c70ed3db66f895",
+      "size": 7302,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/reference/subagents/skill-reviewer.md",
+      "hash": "9e3fd0743297f1bc8d196ffcdb1704c4bdfc6c08ff14b2a05b7340c6b1c7f013",
+      "size": 6777,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-any/reference/subagents/workflow-entry-author.md",
+      "hash": "cef96c63ec69966719c7a3059abf39a358bd610ba75153b98978ab08fdc4083f",
+      "size": 6427,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-archive/SKILL.md",
+      "hash": "ece381e78af2fe5ad56701a8d4f59295d46e002251c7764e61c16e081e0f6921",
+      "size": 7400,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-build/SKILL.md",
+      "hash": "26408217808d2522aaeeaa696a449980184b72f5c9c88d319cee0fe903ebe2a9",
+      "size": 22733,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-classic/SKILL.md",
+      "hash": "32e98f0c4a2f0fc786562e4690b9f9288221e3c8877c220a44d5fe26aeb4dd93",
+      "size": 18601,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-design/SKILL.md",
+      "hash": "35d90b3ca56c82e700526777aa6eee5d182c031353974e9a1c5496c2338b413b",
+      "size": 12162,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-hotfix/SKILL.md",
+      "hash": "d55ccf2e5b0718887846089d480ac3d0a7c8df2cbdb40435ba9278f6ca3b5b3a",
+      "size": 12704,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-native/SKILL.md",
+      "hash": "f4e292e2b6b5a8984251854ad556fbd64a2c4af0a2f8004144125d53b93b05a8",
+      "size": 19414,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-native/reference/artifacts.md",
+      "hash": "5dc4c5812d5a58e7d4c34a0db9dd233e3c0de2fef83ac4bc232b35adcb0a7711",
+      "size": 12474,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-native/reference/commands.md",
+      "hash": "51f96fb3f715e40cf2e72e3eaae0d7106b46fcc055b861b77645ea80b839b8dc",
+      "size": 8385,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-native/reference/recovery.md",
+      "hash": "5781ea9ee1d06030492f9cc433cff9204d0be6cca7bf19227fefcfdec4cde152",
+      "size": 11995,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-native/scripts/comet-native-hook-guard.mjs",
+      "hash": "819de5cb6b2e32e79e6978988b50083a3faf2247683ff09d57d335883752c19d",
+      "size": 145,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-native/scripts/comet-native-runtime.mjs",
+      "hash": "0f93bd698d5d8259f88525816a8493ae3ca1b3626c108fbf517193b0dc6d7dbb",
+      "size": 1122717,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-open/SKILL.md",
+      "hash": "a71fee2f98f9e353f13030ac3d1d134343537ae9b28ed5996145bb6e78eb7db1",
+      "size": 17375,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-tweak/SKILL.md",
+      "hash": "12e5446de3f8c8506a107bd6e4836a2da75e1eda09a3e7e7ab4b4d5ca70ddb22",
+      "size": 13219,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet-verify/SKILL.md",
+      "hash": "8cc420a16353d6cb04e0af82c6e28b635c66ed99ed46dee6d15f6427b0efebbc",
+      "size": 13170,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/SKILL.md",
+      "hash": "7a7262b67bc15afcd14d246243db9e6e7713988bbc8be6bee06f6f610b549329",
+      "size": 1343,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/reference/auto-transition.md",
+      "hash": "ceccd13a9b4f591de38d7409890759f3089025f65c27f052afefa950ee26848f",
+      "size": 1286,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/reference/comet-yaml-fields.md",
+      "hash": "251fe2b478d7c0d733829ba132ffc140c2b2613f4fa02a6b70e9fbf003a887c9",
+      "size": 6737,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/reference/context-recovery.md",
+      "hash": "28b7846948dee6f4617a278f9fa8ee95aa85af842429cbf1200dee933dc6ba97",
+      "size": 2922,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/reference/debug-gate.md",
+      "hash": "d5471ff6de6bee8642a1d0b77d08c771eddd858e3ff6640924c400b65b7f390f",
+      "size": 2375,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/reference/decision-point.md",
+      "hash": "800482c743e2d54877231141edbe31df3011cb9281921e59e739c34eab31b066",
+      "size": 3194,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/reference/dirty-worktree.md",
+      "hash": "27f9666c3c3ae0e2670ab501e7d2a634f22ebea2d74e231727515fe181e1f853",
+      "size": 3286,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/reference/file-structure.md",
+      "hash": "21a9c52cdb3224036b1c6f627246af655be33316d7879d87f64fedbc74fc3de1",
+      "size": 1312,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/reference/intent-frame.md",
+      "hash": "390ba9afeac5242485d0869bd4e30c273aac9caeac3395558a9bd4f84b3f4f4e",
+      "size": 4629,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/reference/scripts.md",
+      "hash": "f810279be3d939761891677ca62d2e4f166e2954ea5889329c481c68aafc6880",
+      "size": 4532,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/reference/subagent-dispatch.md",
+      "hash": "f3d8d580f5ea75d62b2bb77a90a4d7fc8c552a67875835d00207fee463e8e428",
+      "size": 17193,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/runtime/classic/checks.yaml",
+      "hash": "2173d75906e5020dbd71220b6a7b517b2a54edb91463bf0ef499b0107192f58d",
+      "size": 120,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/runtime/classic/guardrails.yaml",
+      "hash": "c962776d74f40af41252f45160d0ab427d06065e09edaf409179bdabce0d3e0e",
+      "size": 236,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/runtime/classic/skill.yaml",
+      "hash": "856d4eb30d803018b37023c04ea4b1faf7ff811513552aadd468d17e88b2c254",
+      "size": 4240,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-archive.mjs",
+      "hash": "8e671fbcec253885fec485f1e380e21c48d76abbb32825bc0d1889de7c2fd96a",
+      "size": 134,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-entry-runtime.mjs",
+      "hash": "ec8ff6ebf3cbae1b20aa32b05366f7df44b33e2eb6648b379b03b29a1d9b1212",
+      "size": 286023,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-env.mjs",
+      "hash": "ec5ed6dd31451c3b48a4e1e1dc8cd148759288fa778d6180aa6f16ae810de62c",
+      "size": 668,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-guard.mjs",
+      "hash": "ac07e951389437ef09d758b6138fd967d94230fbaf8c0cf4d4bd41acafb63636",
+      "size": 132,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-handoff.mjs",
+      "hash": "6ca8d5c2152b68409fbd9dc880c6e7f9a8007f012e154b33d796d0acb3e6a42d",
+      "size": 134,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-hook-guard.mjs",
+      "hash": "50f617c1da8dec33492e7d01877e3e26b73355d4c43e9d06f8fadebfb658edc7",
+      "size": 137,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-hook-router.mjs",
+      "hash": "4516df41852f4c7bfc1949b84dc31bae61f8e466063f3ce304f02d1932a1c5a2",
+      "size": 379241,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-intent.mjs",
+      "hash": "762efd0e7329ec6ca1b4b0d7e7eababcd72b7485e89fb65ccabc1e116fa4e8d5",
+      "size": 133,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-resume-probe.mjs",
+      "hash": "93eb865ce26c91139d00793bc9271df4849e97df61e4417eb5fd40b95e5a7be1",
+      "size": 139,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-runtime.mjs",
+      "hash": "f97c077804b45561d369c2f9da4d9af42157b62370d8591f4b685a8517864d45",
+      "size": 541892,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-state.mjs",
+      "hash": "977cb85cff6dc86f7f035b32d7d6f983e29c2da1c9254ddce287c2791ccf30d1",
+      "size": 132,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/comet/scripts/comet-yaml-validate.mjs",
+      "hash": "55414fdd30bc60a2aa881f78ea6520bbdc4782f99b67aea883b062738aee342e",
+      "size": 135,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/dispatching-parallel-agents/SKILL.md",
+      "hash": "f0df13f584049059cc5619f90061405b89dcc6e28ab3f2a8517d27d99c7a46a6",
+      "size": 6644,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/executing-plans/SKILL.md",
+      "hash": "bbd8d28bb655a52817cc129ce49f9e46fa7c6303f72ed5de95bfe914ef8e0ce8",
+      "size": 2588,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/finishing-a-development-branch/SKILL.md",
+      "hash": "e6d4a812de900d33c6eacfb40747f99427f25c304a7b7099120f9373b115a47f",
+      "size": 6832,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/receiving-code-review/SKILL.md",
+      "hash": "647036bbdab7bf2317e14e079595e984c9030f64295e2b4c0fb57dbeb48f25dd",
+      "size": 6382,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/requesting-code-review/SKILL.md",
+      "hash": "1017ccdd5bc61fab67c654cf118cbdb520464b313073a0a6b9a6b9aa647a3ad6",
+      "size": 2826,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/requesting-code-review/code-reviewer.md",
+      "hash": "b2f2ec7596925fe52dac158fdfbca19b3a7d779d619c481e6706a6c0001662d3",
+      "size": 5213,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/SKILL.md",
+      "hash": "41ab239a6ad1c487cd839fdac972a8c9cf0f5e90efa59a63f963767864f0df4c",
+      "size": 21647,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/implementer-prompt.md",
+      "hash": "49018b28dc11bc9f3d13a28959bb10ae1a96eabc5d8f19f4079d901f9ff2bf64",
+      "size": 5522,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/scripts/review-package",
+      "hash": "0c0629f6e2c46fc8bf68dcfb8a247ab24eb548b7004fe494035e6fcba9b5cdfb",
+      "size": 1350,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/scripts/sdd-workspace",
+      "hash": "9430befaff459ed862415b700c1a9efe45fd34838a684802a1d8320de0c3a007",
+      "size": 888,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/scripts/task-brief",
+      "hash": "5380283f00bffa99ab82ae78482b7d248abe10655129c72ca7050bdc0b6a85e1",
+      "size": 1102,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/task-reviewer-prompt.md",
+      "hash": "2eb9d54373420de25bc0bd00635d3a3123a6c0eb30c881168e6f3348e2387331",
+      "size": 7919,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/CREATION-LOG.md",
+      "hash": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+      "size": 4257,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/SKILL.md",
+      "hash": "3b20719eca4f0461cb51a195221320d775dcf03b6859271066a03a5132a6ce7a",
+      "size": 9885,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/condition-based-waiting-example.ts",
+      "hash": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
+      "size": 5054,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/condition-based-waiting.md",
+      "hash": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+      "size": 3516,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/defense-in-depth.md",
+      "hash": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+      "size": 3650,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/find-polluter.sh",
+      "hash": "6462747eae9b175ac145b78bcfaeab755654a75e32637f08eb633f065a9e1d7c",
+      "size": 1528,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/root-cause-tracing.md",
+      "hash": "6b0622269e098ca1399e123e553fd385f0b6412d88ef0e9c4f5a8ea9cf1cec7b",
+      "size": 5316,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/test-academic.md",
+      "hash": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+      "size": 653,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/test-pressure-1.md",
+      "hash": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+      "size": 1900,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/test-pressure-2.md",
+      "hash": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+      "size": 2283,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/test-pressure-3.md",
+      "hash": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+      "size": 2692,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/test-driven-development/SKILL.md",
+      "hash": "b5b4717b8b761cce15a6cfe9022e33fd959e0894c0c39d72c9cb49c23486c10e",
+      "size": 9894,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/test-driven-development/testing-anti-patterns.md",
+      "hash": "bde453bc258f06543987477c837939afaa774ea2acbd9f308d702fc452bc4283",
+      "size": 8251,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/using-git-worktrees/SKILL.md",
+      "hash": "e2c3ec142e52868a51af246c620cd76ab648dcf27d6900d47e6ffd07159a9794",
+      "size": 7472,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/using-superpowers/SKILL.md",
+      "hash": "55379fe7c1c473a02c61961c822996bff30e1320d6921d9062509bc508482c05",
+      "size": 3063,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/using-superpowers/references/antigravity-tools.md",
+      "hash": "d0bcfa94dd0fa399fb9606a0f7c9562b43040cad02be167a2b999c3913a1d5e9",
+      "size": 1539,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/using-superpowers/references/codex-tools.md",
+      "hash": "9310bb2315eed2c1cebea02cd1c9e8fe121cb788fc6b41e8b8f8b5ff46f85f37",
+      "size": 1528,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/using-superpowers/references/pi-tools.md",
+      "hash": "703dbc83d23ecab9c6f388460c38abc482e9dee2fe6772a8c7a255152ad3a4d5",
+      "size": 1242,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/verification-before-completion/SKILL.md",
+      "hash": "ea52d15aabaf72bc6b558efe2c126f161b53961090ddcd712000273bfe8c7b6c",
+      "size": 4201,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/writing-plans/SKILL.md",
+      "hash": "272e1af349f5062c28dc282b3e21b220d58d683a7314a10c455b7432ec91d845",
+      "size": 7092,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/writing-plans/plan-document-reviewer-prompt.md",
+      "hash": "aa728b96aad603c8be28875a4305637f6c984aa81ffcadcb13e743202fa2a0c7",
+      "size": 1713,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/writing-skills/SKILL.md",
+      "hash": "6b8d08fe863318be8480ae8428e169640309fa9208df84bb0510012764454146",
+      "size": 26431,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/writing-skills/anthropic-best-practices.md",
+      "hash": "217629b356c09c9bd11017c9788e8fc654ca1b32c92d4a51cd490e16dd65e59a",
+      "size": 46197,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/writing-skills/examples/CLAUDE_MD_TESTING.md",
+      "hash": "0b379a3415e185d3c434b3ad283d8aa132f3022c2a4f210f168865b5986bcef0",
+      "size": 5423,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/writing-skills/graphviz-conventions.dot",
+      "hash": "e2890a593c91370e384b42f2f67b1a6232c9e69dddea7891a0c1c46d7b20b694",
+      "size": 5970,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/writing-skills/persuasion-principles.md",
+      "hash": "a51bc9bf75189ea73a27b3fb504a2fdfdb966fb1f7f1cdf03203230a216ccc03",
+      "size": 5901,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/writing-skills/render-graphs.js",
+      "hash": "ccda971a87bb185f8febf81c56b556a20d026fa980c17b35fa3e8824fbb37852",
+      "size": 4857,
+      "type": "file"
+    },
+    {
+      "path": ".agents/skills/writing-skills/testing-skills-with-subagents.md",
+      "hash": "c711346852c911b24a84aa161e0cff06a4cd7f4e2fa9e9c0a266cead5afcbade",
+      "size": 12558,
+      "type": "file"
+    },
+    {
+      "path": ".assetsignore",
+      "hash": "9f7625d6041a9476137041568b30c080cb5e255eff62618dcad93c5f12af70e9",
+      "size": 187,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/apply.md",
+      "hash": "89d7cee95f269936adfa3b38e19acca09dc1780d6b448968e3315fc87f5222f4",
+      "size": 5287,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/archive.md",
+      "hash": "fd18d7258de6002efbed97ab32e9ce61f2b7d899e3be6843dd64f6f2b5d88108",
+      "size": 5916,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/bulk-archive.md",
+      "hash": "1db43581a26df449d58d45664cb7f87b246a41ca5798b775af0cbb3f3124a043",
+      "size": 8263,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/continue.md",
+      "hash": "1a2ffc6f77f8c494571966d88ecbfbdcbb8950e855894a09c5e7c6523b7c8bf6",
+      "size": 5850,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/explore.md",
+      "hash": "8ed0cb6e9933a71f676ef94a5b865e5681155b04ceafbe0171160791673da156",
+      "size": 7450,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/ff.md",
+      "hash": "334ba274659a26d988cf3aeaf74faab9ddfc42d4b9fff83da66ae1f4327c5977",
+      "size": 5074,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/new.md",
+      "hash": "4644616a392405a2cb34cd51fa0e91809acd10d9b79ba85d844e7f86c4dbc78f",
+      "size": 3282,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/onboard.md",
+      "hash": "6841d75600bbb3d9e05c6a9bd8c0449c3db0bedfa2707479026a7bda6d512ced",
+      "size": 14945,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/propose.md",
+      "hash": "b6f40402553e7348172fae8e154aa65284f49308a90d79209d2bdaae35059023",
+      "size": 5237,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/sync.md",
+      "hash": "df2c3ba5ad9bc4d6ecc8b35427285ad6355fc12fe1574cbca7bed165396075b1",
+      "size": 5058,
+      "type": "file"
+    },
+    {
+      "path": ".claude/commands/opsx/verify.md",
+      "hash": "1977f0a348c31fedec23185671f26af8e375d47f9199f6734ea021ab121bd2e3",
+      "size": 7168,
+      "type": "file"
+    },
+    {
+      "path": ".claude/rules/comet-workflow-guard.md",
+      "hash": "d670067cd1c1573b4c655de3ec553252f20126d3dba3d187a78717c2c87cb3c8",
+      "size": 2196,
+      "type": "file"
+    },
+    {
+      "path": ".claude/settings.local.json",
+      "hash": "01a1d7c249e135a80934ab2617c907f45882764e150f66db7f4e83662a71a2ca",
+      "size": 392,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/brainstorming",
+      "hash": "7dd01e4c9c56a9dbc2d78ee812ccd07f79f438c23d7da4a1b297108395ac8f75",
+      "size": 34,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/SKILL.md",
+      "hash": "49d907f2813e5912159022d0c58d5db9c43843f70f655b527cd4026cea924245",
+      "size": 7986,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/reference/authored-zone-example.md",
+      "hash": "440f1e4ef3f9ba2404110ed0a220492b0c902e5f4ed8a0346be69eedaf2e6a08",
+      "size": 8362,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/reference/authoring-subagents.md",
+      "hash": "6fbbee8ceb9c3fd7844e9d9f9336f8cbc1e3d79b7f318120498d23eb35512b11",
+      "size": 6534,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/reference/bundle-authoring.md",
+      "hash": "5c3199221e608b20f70e4ebc06c44b1a82b848af3740c069aa1c8a29ee77e500",
+      "size": 6432,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/reference/eval-provider.md",
+      "hash": "5998c9588c18dc52413f73a7b2ed50d28081e682f2a28b4ba44018c448d61e5b",
+      "size": 3218,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/reference/subagents/pause-points-author.md",
+      "hash": "543a34062573b5e6f8c47e37650cb450cf81edde4c618ef346f4fc079a076f75",
+      "size": 4515,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/reference/subagents/reference-author.md",
+      "hash": "6ded3e85ef29003236a78d82bed92100f851e1928857bc7ae29c2258ff7cc733",
+      "size": 3273,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/reference/subagents/script-author.md",
+      "hash": "c54904e095445b02ba8ef0e6ca21253aa980193a7feaf7c715b1eea85550b4aa",
+      "size": 3785,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/reference/subagents/skill-core-author.md",
+      "hash": "84ef68efec0e7b708f09ce5988575a087b63089b38849ef394c70ed3db66f895",
+      "size": 7302,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/reference/subagents/skill-reviewer.md",
+      "hash": "9e3fd0743297f1bc8d196ffcdb1704c4bdfc6c08ff14b2a05b7340c6b1c7f013",
+      "size": 6777,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-any/reference/subagents/workflow-entry-author.md",
+      "hash": "cef96c63ec69966719c7a3059abf39a358bd610ba75153b98978ab08fdc4083f",
+      "size": 6427,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-archive/SKILL.md",
+      "hash": "ece381e78af2fe5ad56701a8d4f59295d46e002251c7764e61c16e081e0f6921",
+      "size": 7400,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-build/SKILL.md",
+      "hash": "26408217808d2522aaeeaa696a449980184b72f5c9c88d319cee0fe903ebe2a9",
+      "size": 22733,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-classic/SKILL.md",
+      "hash": "32e98f0c4a2f0fc786562e4690b9f9288221e3c8877c220a44d5fe26aeb4dd93",
+      "size": 18601,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-design/SKILL.md",
+      "hash": "35d90b3ca56c82e700526777aa6eee5d182c031353974e9a1c5496c2338b413b",
+      "size": 12162,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-hotfix/SKILL.md",
+      "hash": "d55ccf2e5b0718887846089d480ac3d0a7c8df2cbdb40435ba9278f6ca3b5b3a",
+      "size": 12704,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-native/SKILL.md",
+      "hash": "f4e292e2b6b5a8984251854ad556fbd64a2c4af0a2f8004144125d53b93b05a8",
+      "size": 19414,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-native/reference/artifacts.md",
+      "hash": "5dc4c5812d5a58e7d4c34a0db9dd233e3c0de2fef83ac4bc232b35adcb0a7711",
+      "size": 12474,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-native/reference/commands.md",
+      "hash": "51f96fb3f715e40cf2e72e3eaae0d7106b46fcc055b861b77645ea80b839b8dc",
+      "size": 8385,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-native/reference/recovery.md",
+      "hash": "5781ea9ee1d06030492f9cc433cff9204d0be6cca7bf19227fefcfdec4cde152",
+      "size": 11995,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-native/scripts/comet-native-hook-guard.mjs",
+      "hash": "819de5cb6b2e32e79e6978988b50083a3faf2247683ff09d57d335883752c19d",
+      "size": 145,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-native/scripts/comet-native-runtime.mjs",
+      "hash": "0f93bd698d5d8259f88525816a8493ae3ca1b3626c108fbf517193b0dc6d7dbb",
+      "size": 1122717,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-open/SKILL.md",
+      "hash": "a71fee2f98f9e353f13030ac3d1d134343537ae9b28ed5996145bb6e78eb7db1",
+      "size": 17375,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-tweak/SKILL.md",
+      "hash": "12e5446de3f8c8506a107bd6e4836a2da75e1eda09a3e7e7ab4b4d5ca70ddb22",
+      "size": 13219,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet-verify/SKILL.md",
+      "hash": "8cc420a16353d6cb04e0af82c6e28b635c66ed99ed46dee6d15f6427b0efebbc",
+      "size": 13170,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/SKILL.md",
+      "hash": "7a7262b67bc15afcd14d246243db9e6e7713988bbc8be6bee06f6f610b549329",
+      "size": 1343,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/reference/auto-transition.md",
+      "hash": "ceccd13a9b4f591de38d7409890759f3089025f65c27f052afefa950ee26848f",
+      "size": 1286,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/reference/comet-yaml-fields.md",
+      "hash": "251fe2b478d7c0d733829ba132ffc140c2b2613f4fa02a6b70e9fbf003a887c9",
+      "size": 6737,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/reference/context-recovery.md",
+      "hash": "28b7846948dee6f4617a278f9fa8ee95aa85af842429cbf1200dee933dc6ba97",
+      "size": 2922,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/reference/debug-gate.md",
+      "hash": "d5471ff6de6bee8642a1d0b77d08c771eddd858e3ff6640924c400b65b7f390f",
+      "size": 2375,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/reference/decision-point.md",
+      "hash": "800482c743e2d54877231141edbe31df3011cb9281921e59e739c34eab31b066",
+      "size": 3194,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/reference/dirty-worktree.md",
+      "hash": "27f9666c3c3ae0e2670ab501e7d2a634f22ebea2d74e231727515fe181e1f853",
+      "size": 3286,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/reference/file-structure.md",
+      "hash": "21a9c52cdb3224036b1c6f627246af655be33316d7879d87f64fedbc74fc3de1",
+      "size": 1312,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/reference/intent-frame.md",
+      "hash": "390ba9afeac5242485d0869bd4e30c273aac9caeac3395558a9bd4f84b3f4f4e",
+      "size": 4629,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/reference/scripts.md",
+      "hash": "f810279be3d939761891677ca62d2e4f166e2954ea5889329c481c68aafc6880",
+      "size": 4532,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/reference/subagent-dispatch.md",
+      "hash": "f3d8d580f5ea75d62b2bb77a90a4d7fc8c552a67875835d00207fee463e8e428",
+      "size": 17193,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/runtime/classic/checks.yaml",
+      "hash": "2173d75906e5020dbd71220b6a7b517b2a54edb91463bf0ef499b0107192f58d",
+      "size": 120,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/runtime/classic/guardrails.yaml",
+      "hash": "c962776d74f40af41252f45160d0ab427d06065e09edaf409179bdabce0d3e0e",
+      "size": 236,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/runtime/classic/skill.yaml",
+      "hash": "856d4eb30d803018b37023c04ea4b1faf7ff811513552aadd468d17e88b2c254",
+      "size": 4240,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-archive.mjs",
+      "hash": "8e671fbcec253885fec485f1e380e21c48d76abbb32825bc0d1889de7c2fd96a",
+      "size": 134,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-entry-runtime.mjs",
+      "hash": "ec8ff6ebf3cbae1b20aa32b05366f7df44b33e2eb6648b379b03b29a1d9b1212",
+      "size": 286023,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-env.mjs",
+      "hash": "ec5ed6dd31451c3b48a4e1e1dc8cd148759288fa778d6180aa6f16ae810de62c",
+      "size": 668,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-guard.mjs",
+      "hash": "ac07e951389437ef09d758b6138fd967d94230fbaf8c0cf4d4bd41acafb63636",
+      "size": 132,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-handoff.mjs",
+      "hash": "6ca8d5c2152b68409fbd9dc880c6e7f9a8007f012e154b33d796d0acb3e6a42d",
+      "size": 134,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-hook-guard.mjs",
+      "hash": "50f617c1da8dec33492e7d01877e3e26b73355d4c43e9d06f8fadebfb658edc7",
+      "size": 137,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-hook-router.mjs",
+      "hash": "4516df41852f4c7bfc1949b84dc31bae61f8e466063f3ce304f02d1932a1c5a2",
+      "size": 379241,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-intent.mjs",
+      "hash": "762efd0e7329ec6ca1b4b0d7e7eababcd72b7485e89fb65ccabc1e116fa4e8d5",
+      "size": 133,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-resume-probe.mjs",
+      "hash": "93eb865ce26c91139d00793bc9271df4849e97df61e4417eb5fd40b95e5a7be1",
+      "size": 139,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-runtime.mjs",
+      "hash": "f97c077804b45561d369c2f9da4d9af42157b62370d8591f4b685a8517864d45",
+      "size": 541892,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-state.mjs",
+      "hash": "977cb85cff6dc86f7f035b32d7d6f983e29c2da1c9254ddce287c2791ccf30d1",
+      "size": 132,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/comet/scripts/comet-yaml-validate.mjs",
+      "hash": "55414fdd30bc60a2aa881f78ea6520bbdc4782f99b67aea883b062738aee342e",
+      "size": 135,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/dispatching-parallel-agents",
+      "hash": "4715aff8fabfc6a1f526bdcadcf58f1c1c69d0f263cbc95eea4e0693c95da3f7",
+      "size": 48,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/executing-plans",
+      "hash": "2632d9c2ee05d26c83dedb69dc52625403ea54b22e03b62a9d584bd62784ed3d",
+      "size": 36,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/finishing-a-development-branch",
+      "hash": "13137a65597d99665d3b394c6798055feab68547f0248b111c01d19a7e1800c2",
+      "size": 51,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-apply-change/SKILL.md",
+      "hash": "83e0d2d4c47674e312fc9d29297d91e5c018a5507e6961829ee623600e2cf2ff",
+      "size": 5465,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-archive-change/SKILL.md",
+      "hash": "85c8764715a18fbd11d16ca04bd9e15d8644bf5e4203176ad34eee192b546472",
+      "size": 4965,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-bulk-archive-change/SKILL.md",
+      "hash": "3c6ddb48075af73c9fc09ded392b2ba30be95137b081a0fb3f31ebe805a7526a",
+      "size": 8372,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-continue-change/SKILL.md",
+      "hash": "329668263b606ae68c575c4d66eafbedffa2a32c7fb4e1a6ed39e9c38b1c1317",
+      "size": 5944,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-explore/SKILL.md",
+      "hash": "79249f798ad0d69bf95f08f3c7a29d44d982e4c1645f1a12a21dfcd488f4ba0d",
+      "size": 11428,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-ff-change/SKILL.md",
+      "hash": "462e04573be904d71865dc43d105e0d8b7445ecf875da6af65a1e65101f31d41",
+      "size": 5257,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-new-change/SKILL.md",
+      "hash": "c993693c31bc6d62ef940de6d58c3f9749f240ecf2bf9decc09b8ee846b5556f",
+      "size": 3498,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-onboard/SKILL.md",
+      "hash": "477b2e6d6f3ff7e3da69d870840145434df37a42b9c432f2b5f8139bc1f88b38",
+      "size": 15026,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-propose/SKILL.md",
+      "hash": "a666b2381a7d5e982d8e32183484020f518da2b795c0f387c5ff4b3cb47be0fd",
+      "size": 5465,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-sync-specs/SKILL.md",
+      "hash": "420e5815eee33ebd642b9d038f0a5307b176923a5c1a837c4873e51de085aae3",
+      "size": 5187,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/openspec-verify-change/SKILL.md",
+      "hash": "8b47bf0dce2e9fe5ee3a8a5ab63d56e13dd4cde9ccf0d076fba0bfd017c285d7",
+      "size": 7278,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/receiving-code-review",
+      "hash": "1d7c421e98c11034ec1863740513687be0be21bca22094180e1598f005eb3c44",
+      "size": 42,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/requesting-code-review",
+      "hash": "3fb0f8997b8226f555d138eca91d940d8eb220f048d1e41a9e5e3bd981ad4b09",
+      "size": 43,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/subagent-driven-development",
+      "hash": "69c6fbdb26e1f9bd2126619891a355885e8c4d78b3899dcafd040a58738ae73b",
+      "size": 48,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/systematic-debugging",
+      "hash": "3d2a76e0df390be56790fe547e54298e22b12355d0d44d0f94baa7815df33280",
+      "size": 41,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/test-driven-development",
+      "hash": "c12b5ee015072750da42390c55ff5e80a0136eb0528a9ba3062fb41fc791e7a6",
+      "size": 44,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/using-git-worktrees",
+      "hash": "f5b292db069fb49370f44f18e0e59548ec5af5ae7017f5f62f9b184f4b88c21f",
+      "size": 40,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/using-superpowers",
+      "hash": "d654e54b4df46c416bc24df20248b7e9b650853975f7f0323901d9a8a736f0e0",
+      "size": 38,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/verification-before-completion",
+      "hash": "8b668b4c85701b5545176983727084e2e6e3def2793975dd4949cde142431831",
+      "size": 51,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/writing-plans",
+      "hash": "8caf4181c5cd8de4e190ad9192c36c0d5f166c5d6578a2cabccacfc4bd4f1702",
+      "size": 34,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/writing-skills",
+      "hash": "b70ef8c0b84cf2679713a8b0c052d46917eb5e061fff1bc67ce3dce3470682b7",
+      "size": 35,
+      "type": "file"
+    },
+    {
+      "path": ".codex/hooks.json",
+      "hash": "861cfe3375adf0f8ae9acead8ba7d607e8fd403b54b44233f7835f0cc54f7ef3",
+      "size": 391,
+      "type": "file"
+    },
+    {
+      "path": ".codex/rules/comet-workflow-guard.md",
+      "hash": "d670067cd1c1573b4c655de3ec553252f20126d3dba3d187a78717c2c87cb3c8",
+      "size": 2196,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-apply-change/SKILL.md",
+      "hash": "83e0d2d4c47674e312fc9d29297d91e5c018a5507e6961829ee623600e2cf2ff",
+      "size": 5465,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-archive-change/SKILL.md",
+      "hash": "85c8764715a18fbd11d16ca04bd9e15d8644bf5e4203176ad34eee192b546472",
+      "size": 4965,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-bulk-archive-change/SKILL.md",
+      "hash": "3c6ddb48075af73c9fc09ded392b2ba30be95137b081a0fb3f31ebe805a7526a",
+      "size": 8372,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-continue-change/SKILL.md",
+      "hash": "329668263b606ae68c575c4d66eafbedffa2a32c7fb4e1a6ed39e9c38b1c1317",
+      "size": 5944,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-explore/SKILL.md",
+      "hash": "79249f798ad0d69bf95f08f3c7a29d44d982e4c1645f1a12a21dfcd488f4ba0d",
+      "size": 11428,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-ff-change/SKILL.md",
+      "hash": "462e04573be904d71865dc43d105e0d8b7445ecf875da6af65a1e65101f31d41",
+      "size": 5257,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-new-change/SKILL.md",
+      "hash": "c993693c31bc6d62ef940de6d58c3f9749f240ecf2bf9decc09b8ee846b5556f",
+      "size": 3498,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-onboard/SKILL.md",
+      "hash": "477b2e6d6f3ff7e3da69d870840145434df37a42b9c432f2b5f8139bc1f88b38",
+      "size": 15026,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-propose/SKILL.md",
+      "hash": "a666b2381a7d5e982d8e32183484020f518da2b795c0f387c5ff4b3cb47be0fd",
+      "size": 5465,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-sync-specs/SKILL.md",
+      "hash": "420e5815eee33ebd642b9d038f0a5307b176923a5c1a837c4873e51de085aae3",
+      "size": 5187,
+      "type": "file"
+    },
+    {
+      "path": ".codex/skills/openspec-verify-change/SKILL.md",
+      "hash": "8b47bf0dce2e9fe5ee3a8a5ab63d56e13dd4cde9ccf0d076fba0bfd017c285d7",
+      "size": 7278,
+      "type": "file"
+    },
+    {
+      "path": ".gitignore",
+      "hash": "354727bb6e25e8015f885327edc349e8711de1bbd5a3d4ea7e00792f495076da",
+      "size": 74,
+      "type": "file"
+    },
+    {
+      "path": "AGENTS.md",
+      "hash": "12820d72cc9326c52336c54b8860b5a31aa830ed51318637b498513f76bddfcd",
+      "size": 1171,
+      "type": "file"
+    },
+    {
+      "path": "CLAUDE.md",
+      "hash": "12820d72cc9326c52336c54b8860b5a31aa830ed51318637b498513f76bddfcd",
+      "size": 1171,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "hash": "e8335a693356d4918433739283c352fc4eb0b8351b8b963fd98243c1434b3e41",
+      "size": 5012,
+      "type": "file"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "hash": "796c8522cedf3223a674ebe9fa90d0feeb01d0198480b45e667e8be90fd70083",
+      "size": 178380,
+      "type": "file"
+    },
+    {
+      "path": "index.html",
+      "hash": "30ff33e5b7ea60ee8355f9ff16ebde1573d8460166f24924c14ad6548efb829d",
+      "size": 310523,
+      "type": "file"
+    },
+    {
+      "path": "openspec/config.yaml",
+      "hash": "7f64d2448e1c83ffa6f2f3398b742fb5f2d4d3ea47b2c540a9076484977026b4",
+      "size": 573,
+      "type": "file"
+    },
+    {
+      "path": "package-lock.json",
+      "hash": "e2128ddaf78b50b598d70f598734e6caf1745c2ed85e246fc234a7aa99c635c8",
+      "size": 48421,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "hash": "a867babf8866ba1d7bf5cfb58f9696d7c5f907383f99f441da126950c6ab592d",
+      "size": 197,
+      "type": "file"
+    },
+    {
+      "path": "realtime/package-lock.json",
+      "hash": "3d62583e67bf6cb68839b7c9de2e1eef743acb6616cd45c9676bf354feae6436",
+      "size": 48487,
+      "type": "file"
+    },
+    {
+      "path": "realtime/package.json",
+      "hash": "02e72cffe567878d9689ea3e4e30010e22a44c93b30dc950f2d164865f84ead6",
+      "size": 593,
+      "type": "file"
+    },
+    {
+      "path": "realtime/src/index.js",
+      "hash": "180900916bc328aa7d10084780a05662953f14bced71634073f94b0b98a04251",
+      "size": 35297,
+      "type": "file"
+    },
+    {
+      "path": "realtime/wrangler.jsonc",
+      "hash": "79abb975684f312f88c7767f0bd6c57ca81b9b210dc54539e82ddde613c00127",
+      "size": 696,
+      "type": "file"
+    },
+    {
+      "path": "skills-lock.json",
+      "hash": "b8354a4d53a40fb51b99067cea5ee254f8cceaa172296605118923333cb7aca4",
+      "size": 3825,
+      "type": "file"
+    },
+    {
+      "path": "src/worker.js",
+      "hash": "32d34e715088838f4493b23da789677042e7bcab83244f55b9995e9be75d330e",
+      "size": 1644,
+      "type": "file"
+    },
+    {
+      "path": "vps/agent.py",
+      "hash": "6ecdd0691f9d03c0dde9f140f16d84c81e5fdc11a073e01379936a85df9e9cac",
+      "size": 92766,
+      "type": "file"
+    },
+    {
+      "path": "vps/kui.sh",
+      "hash": "7bcdb1e78ac8c7ba9df4265a9019bcf054b2717f7fe4f53d8160db5e95866b64",
+      "size": 17785,
+      "type": "file"
+    },
+    {
+      "path": "vps/lite_manager.py",
+      "hash": "eeef808ac25220e75d49d6689775b8218e79352c323ddc751291a08af6f001de",
+      "size": 41784,
+      "type": "file"
+    },
+    {
+      "path": "vps/proxy_server.py",
+      "hash": "45dcc4288b2b0ac807e73e9239d4b0b7dfaef248251463c9b4b864a88e667fff",
+      "size": 10902,
+      "type": "file"
+    },
+    {
+      "path": "vps/realtime_client.py",
+      "hash": "ba6b5f167a6ac280d8b4471600198fa899be413db75512a6bdd020a57485cb20",
+      "size": 5199,
+      "type": "file"
+    },
+    {
+      "path": "vps/residential-proxy.sh",
+      "hash": "43a73e6f9464b314233b12ba0fd76450b445795ac66ac9987d2a812100a9836f",
+      "size": 16498,
+      "type": "file"
+    },
+    {
+      "path": "vps/test_agent_report_batches.py",
+      "hash": "02d9f517a6b380ac32fd7a91641f058e25958850b164ce19bdaba3a8d854b75a",
+      "size": 14945,
+      "type": "file"
+    },
+    {
+      "path": "wrangler.jsonc",
+      "hash": "3f008ac6f411ea08e176d1fe67d976c88db317ba341465aa219b34b5c5db82d1",
+      "size": 970,
+      "type": "file"
+    }
+  ],
+  "omitted": [],
+  "omittedCount": 0
+}
