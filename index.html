@@ -452,9 +452,9 @@
                 </div>
                 <div class="flex flex-wrap justify-center lg:justify-end items-center gap-2 w-full lg:w-auto">
                     <span class="text-[10px] md:text-xs font-semibold kui-live px-3 py-1.5 rounded-full">实时连接</span>
-                    <button v-if="role === 'admin'" @click="copyCommand(generateSubLink('', ''), '全量普通订阅已复制！')" class="kui-btn kui-btn-solid text-white px-4 py-2 rounded-full text-xs font-bold shadow-md transition-all">普通订阅</button>
-                    <button v-if="role === 'admin'" @click="copyCommand(generateSubLink('', 'clash'), '全量Clash订阅已复制！')" class="kui-btn kui-btn-solid text-white px-4 py-2 rounded-full text-xs font-bold shadow-md transition-all">Clash 订阅</button>
-                    <button v-if="role === 'admin'" @click="showQrCode(generateSubLink('', ''))" class="kui-btn kui-btn-ghost px-4 py-2 rounded-full text-xs font-bold shadow-md transition-all">二维码</button>
+                    <button v-if="role === 'admin'" :disabled="!mySubToken" @click="copyCommand(generateSubLink('', ''), '全量普通订阅已复制！')" class="kui-btn kui-btn-solid text-white px-4 py-2 rounded-full text-xs font-bold shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-50">普通订阅</button>
+                    <button v-if="role === 'admin'" :disabled="!mySubToken" @click="copyCommand(generateSubLink('', 'clash'), '全量Clash订阅已复制！')" class="kui-btn kui-btn-solid text-white px-4 py-2 rounded-full text-xs font-bold shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-50">Clash 订阅</button>
+                    <button v-if="role === 'admin'" :disabled="!mySubToken" @click="showQrCode(generateSubLink('', ''))" class="kui-btn kui-btn-ghost px-4 py-2 rounded-full text-xs font-bold shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-50">二维码</button>
                     <button @click="refreshData" class="bg-slate-50 hover:bg-white border border-slate-200 px-4 py-2 rounded-full text-xs font-medium transition-all shadow-sm">刷新</button>
                     <button @click="logout" class="kui-btn px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200">退出</button>
                 </div>
@@ -481,21 +481,111 @@
             </div>
 
             <div v-if="role === 'admin' && activeTab === 'nodes'" class="space-y-5">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <template v-if="nodeWorkspace !== 'detail'">
+                    <div class="kui-surface p-4 md:p-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <div class="text-[11px] font-semibold text-slate-400">服务器与节点</div>
+                            <h2 class="mt-1 text-lg font-semibold text-slate-900">{{ nodeWorkspace === 'servers' ? '服务器概览' : '节点库存' }}</h2>
+                        </div>
+                        <div class="inline-flex w-full overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-1 sm:w-auto">
+                            <button @click="switchNodeWorkspace('servers')" :class="nodeWorkspace === 'servers' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="min-w-[112px] rounded-md px-3 py-2 text-xs font-semibold">服务器概览</button>
+                            <button @click="switchNodeWorkspace('inventory')" :class="nodeWorkspace === 'inventory' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'" class="min-w-[112px] rounded-md px-3 py-2 text-xs font-semibold">节点库存</button>
+                        </div>
+                    </div>
+
+                    <template v-if="nodeWorkspace === 'servers'">
+                        <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                            <div class="kui-surface p-4"><div class="text-[10px] font-semibold text-slate-400">已加载机器</div><div class="mt-1 text-xl font-semibold text-slate-800">{{ fleetServers.length }}</div></div>
+                            <div class="kui-surface p-4"><div class="text-[10px] font-semibold text-slate-400">已加载在线</div><div class="mt-1 text-xl font-semibold text-emerald-600">{{ fleetServers.filter(server => serverHealthLabel(server) === '在线').length }}</div></div>
+                            <div class="kui-surface p-4"><div class="text-[10px] font-semibold text-slate-400">已加载节点</div><div class="mt-1 text-xl font-semibold text-slate-800">{{ fleetServers.reduce((sum, server) => sum + serverNodeCount(server), 0) }}</div></div>
+                            <div class="kui-surface p-4"><div class="text-[10px] font-semibold text-slate-400">待关注</div><div class="mt-1 text-xl font-semibold text-amber-600">{{ fleetServers.filter(server => serverHealthLabel(server) !== '在线').length }}</div></div>
+                        </div>
+
+                        <div class="kui-surface p-4 md:p-5">
+                            <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px_auto] md:items-end">
+                                <div><label class="mb-1.5 block text-xs font-semibold text-slate-500">服务器别名</label><input v-model="newVps.name" placeholder="例如：日本软银 01" class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm transition focus:bg-white"></div>
+                                <div><label class="mb-1.5 block text-xs font-semibold text-slate-500">公网 IP</label><input v-model="newVps.ip" placeholder="8.8.8.8" class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 font-mono text-sm transition focus:bg-white"></div>
+                                <div><label class="mb-1.5 block text-xs font-semibold text-slate-500">系统</label><select v-model="newVps.os" class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700"><option value="debian">Ubuntu / Debian</option><option value="alpine">Alpine Linux</option></select></div>
+                                <button @click="addVps" class="kui-btn kui-btn-solid min-h-10 whitespace-nowrap px-5 py-2.5 text-sm text-white">接入机器</button>
+                            </div>
+                        </div>
+
+                        <div class="kui-surface p-4 md:p-5">
+                            <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_150px_170px_auto] md:items-end">
+                                <div><label class="mb-1.5 block text-xs font-semibold text-slate-500">搜索</label><input v-model="fleetServerQuery" @keyup.enter="loadFleetServers(true)" placeholder="名称或 IP" class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm transition focus:bg-white"></div>
+                                <div><label class="mb-1.5 block text-xs font-semibold text-slate-500">状态</label><select v-model="fleetServerStatus" @change="loadFleetServers(true)" class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="">全部状态</option><option value="online">在线</option><option value="stale">状态滞后</option><option value="offline">离线</option></select></div>
+                                <div><label class="mb-1.5 block text-xs font-semibold text-slate-500">出口</label><select v-model="fleetServerEgress" @change="loadFleetServers(true)" class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="">全部出口</option><option value="native">原生出口</option><option value="warp_ipv4">WARP IPv4</option><option value="warp_ipv6">WARP IPv6</option><option value="warp_dual">WARP 双栈</option><option value="residential">住宅 IP</option><option value="socks5">SOCKS5</option></select></div>
+                                <button @click="loadFleetServers(true)" :disabled="fleetServersLoading" class="kui-btn border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">刷新</button>
+                            </div>
+                        </div>
+
+                        <div class="kui-surface overflow-hidden">
+                            <div class="hidden grid-cols-[minmax(180px,1.5fr)_100px_minmax(135px,1fr)_90px_110px_76px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-[11px] font-semibold text-slate-500 lg:grid"><span>服务器</span><span>状态</span><span>资源</span><span>节点</span><span>出口</span><span></span></div>
+                            <div v-for="server in fleetServers" :key="server.ip" class="grid gap-3 border-b border-slate-100 px-4 py-4 last:border-0 lg:grid-cols-[minmax(180px,1.5fr)_100px_minmax(135px,1fr)_90px_110px_76px] lg:items-center lg:gap-4 lg:px-5">
+                                <div class="min-w-0"><div class="truncate font-semibold text-slate-800">{{ server.name || server.ip }}</div><div class="mt-0.5 truncate font-mono text-xs text-slate-400">{{ server.ip }}</div></div>
+                                <div><span :class="serverHealthClass(server)" class="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold">{{ serverHealthLabel(server) }}</span></div>
+                                <div class="grid grid-cols-2 gap-2 text-xs text-slate-600"><span>CPU {{ server.cpu || 0 }}%</span><span>MEM {{ server.mem || 0 }}%</span><span class="col-span-2 text-slate-400">{{ formatUpdatedAt(server.last_report) }}</span></div>
+                                <div class="text-sm font-semibold text-slate-700">{{ serverNodeCount(server) }}</div>
+                                <div class="truncate text-xs font-medium text-slate-600">{{ egressModeLabel(server.egress_mode || 'native') }}</div>
+                                <button @click="openServerWorkspace(server.ip)" class="kui-btn border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">打开</button>
+                            </div>
+                            <div v-if="fleetServersLoading && !fleetServers.length" class="px-5 py-12 text-center text-sm text-slate-400">正在读取服务器…</div>
+                            <div v-else-if="fleetServersError" class="px-5 py-8 text-center text-sm text-rose-600">{{ fleetServersError }}</div>
+                            <div v-else-if="!fleetServers.length" class="px-5 py-12 text-center text-sm text-slate-400">没有匹配的服务器</div>
+                            <div v-if="fleetServersHasMore" class="border-t border-slate-100 p-4 text-center"><button @click="loadFleetServers(false)" :disabled="fleetServersLoading" class="kui-btn border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">加载更多</button></div>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="kui-surface p-4 md:p-5">
+                            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                                <div><div class="text-[11px] font-semibold text-slate-400">节点用量</div><div class="mt-1 text-sm font-medium text-slate-600">更新于 {{ formatUpdatedAt(nodeMetricsUpdatedAt) }}</div></div>
+                                <button @click="refreshVisibleNodeMetrics" class="kui-btn border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">刷新可见指标</button>
+                            </div>
+                            <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                                <input v-model="inventoryQuery" @keyup.enter="loadInventoryNodes(true)" placeholder="协议、端口或节点 ID" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm transition focus:bg-white">
+                                <input v-model="inventoryServerFilter" @keyup.enter="loadInventoryNodes(true)" placeholder="服务器 IP" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 font-mono text-sm transition focus:bg-white">
+                                <select v-model="inventoryProtocol" @change="loadInventoryNodes(true)" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="">全部协议</option><option value="XTLS-Reality">XTLS-Reality</option><option value="Hysteria2">Hysteria2</option><option value="TUIC">TUIC</option><option value="Trojan">Trojan</option><option value="AnyTLS">AnyTLS</option><option value="Naive">Naive</option></select>
+                                <input v-model="inventoryUsername" @keyup.enter="loadInventoryNodes(true)" placeholder="用户" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm transition focus:bg-white">
+                                <div class="flex gap-2"><select v-model="inventoryState" @change="loadInventoryNodes(true)" class="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="">全部状态</option><option value="active">可用</option><option value="disabled">已停用</option><option value="over_quota">已超额</option><option value="expired">已到期</option></select><button @click="loadInventoryNodes(true)" :disabled="inventoryLoading" class="kui-btn kui-btn-solid px-4 py-2.5 text-xs text-white disabled:opacity-50">查询</button></div>
+                            </div>
+                        </div>
+
+                        <div class="kui-surface overflow-hidden">
+                            <div class="hidden grid-cols-[minmax(160px,1.35fr)_minmax(135px,1fr)_100px_minmax(125px,1fr)_92px_128px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-[11px] font-semibold text-slate-500 lg:grid"><span>节点</span><span>服务器</span><span>用户</span><span>用量</span><span>状态</span><span></span></div>
+                            <div v-for="node in inventoryNodes" :key="node.id" :data-fleet-node-id="node.id" class="grid gap-3 border-b border-slate-100 px-4 py-4 last:border-0 lg:grid-cols-[minmax(160px,1.35fr)_minmax(135px,1fr)_100px_minmax(125px,1fr)_92px_128px] lg:items-center lg:gap-4 lg:px-5">
+                                <div class="min-w-0"><div class="truncate font-semibold text-slate-800">{{ node.protocol }} <span class="font-mono text-xs text-slate-400">#{{ node.port }}</span></div><div class="mt-0.5 truncate font-mono text-[11px] text-slate-400">{{ node.id }}</div></div>
+                                <button @click="openServerWorkspace(node.vps_ip)" class="min-w-0 text-left"><div class="truncate text-sm font-medium text-slate-700">{{ node.server_name || getVpsName(node.vps_ip) }}</div><div class="truncate font-mono text-[11px] text-slate-400">{{ node.vps_ip }}</div></button>
+                                <div class="text-sm text-slate-600">{{ node.username }}</div>
+                                <div><div class="text-xs font-medium text-slate-700">{{ formatBytes(node.traffic_used) }}<span v-if="node.traffic_limit > 0"> / {{ formatBytes(node.traffic_limit) }}</span></div><div class="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100"><div :class="node.traffic_limit > 0 && node.traffic_used >= node.traffic_limit ? 'bg-rose-500' : 'bg-slate-700'" class="h-full rounded-full" :style="{ width: getTrafficPercent(node.traffic_used, node.traffic_limit) + '%' }"></div></div></div>
+                                <div><span :class="node.state === 'active' ? 'bg-emerald-100 text-emerald-700' : (node.state === 'disabled' ? 'bg-slate-100 text-slate-600' : 'bg-rose-100 text-rose-700')" class="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold">{{ node.state === 'active' ? '可用' : (node.state === 'disabled' ? '已停用' : (node.state === 'expired' ? '已到期' : '已超额')) }}</span><div v-if="node.expire_time > 0" class="mt-1 text-[11px] text-slate-400">{{ getExpireText(node.expire_time) }}</div></div>
+                                <div class="flex gap-2 lg:justify-end"><button @click="toggleNode(node.id, node.enable === 1 ? 0 : 1)" class="kui-btn border border-slate-300 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">{{ node.enable === 1 ? '停用' : '启用' }}</button><button @click="deleteNode(node.id)" class="kui-btn border border-rose-200 bg-white px-3 py-2 text-[11px] font-semibold text-rose-600 hover:bg-rose-50">删除</button></div>
+                            </div>
+                            <div v-if="inventoryLoading && !inventoryNodes.length" class="px-5 py-12 text-center text-sm text-slate-400">正在读取节点…</div>
+                            <div v-else-if="inventoryError" class="px-5 py-8 text-center text-sm text-rose-600">{{ inventoryError }}</div>
+                            <div v-else-if="!inventoryNodes.length" class="px-5 py-12 text-center text-sm text-slate-400">没有匹配的节点</div>
+                            <div v-if="inventoryHasOlder || inventoryHasNewer" class="flex flex-wrap items-center justify-center gap-3 border-t border-slate-100 px-5 py-3 text-xs text-slate-500"><button v-if="inventoryHasOlder" @click="showEarlierInventoryPages" class="kui-btn border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50">较早已加载</button><span>{{ inventoryWindowLabel }}</span><button v-if="inventoryHasNewer" @click="showLaterInventoryPages" class="kui-btn border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50">较新已加载</button></div>
+                            <div v-if="inventoryHasMore" class="border-t border-slate-100 p-4 text-center"><button @click="loadInventoryNodes(false)" :disabled="inventoryLoading" class="kui-btn border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">加载更多</button></div>
+                        </div>
+                    </template>
+                </template>
+
+                <template v-else>
+                    <div class="kui-surface p-4 md:p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div><div class="text-[11px] font-semibold text-slate-400">单机工作台</div><h2 class="mt-1 text-lg font-semibold text-slate-900">{{ selectedServer?.name || selectedServer?.ip || '服务器详情' }}</h2></div>
+                        <div class="flex items-center gap-2"><button @click="backToServerOverview" class="kui-btn border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">返回概览</button><button @click="refreshFleetWorkspace" class="kui-btn kui-btn-solid px-4 py-2 text-sm text-white">刷新</button></div>
+                    </div>
+                    <div v-if="detailLoading" class="kui-surface px-5 py-12 text-center text-sm text-slate-400">正在打开服务器工作台…</div>
+                    <div v-else-if="detailError" class="kui-surface px-5 py-8 text-center text-sm text-rose-600">{{ detailError }}</div>
+                </template>
+                <div v-if="nodeWorkspace === 'detail' && !detailLoading && !detailError" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="bg-white border border-slate-200 p-5 rounded-xl border border-slate-200 shadow-lg shadow-indigo-100/30 text-center"><div class="text-[10px] text-slate-400 font-bold mb-1 tracking-widest">ONLINE SERVERS</div><div class="text-3xl font-semibold text-slate-700">{{ globalOnline }} / {{ servers.length }}</div></div>
-                    <div class="bg-white border border-slate-200 p-5 rounded-xl border border-slate-200 shadow-lg shadow-indigo-100/30 text-center"><div class="text-[10px] text-slate-400 font-bold mb-1 tracking-widest">AGGREGATE TRAFFIC</div><div class="text-3xl font-semibold text-slate-700">{{ formatBytes(globalTraffic) }}</div></div>
+                    <div class="bg-white border border-slate-200 p-5 rounded-xl border border-slate-200 shadow-lg shadow-indigo-100/30 text-center"><div class="text-[10px] text-slate-400 font-bold mb-1 tracking-widest">AGGREGATE TRAFFIC</div><div class="text-3xl font-semibold text-slate-700">{{ formatBytes(selectedServerTraffic) }}</div></div>
                     <div class="bg-white border border-slate-200 p-5 rounded-xl border border-slate-200 shadow-lg shadow-indigo-100/30 text-center"><div class="text-[10px] text-slate-400 font-bold mb-1 tracking-widest">DOWNLOAD</div><div class="text-2xl font-semibold text-emerald-500 truncate">↓ {{ formatBytes(globalSpeedIn) }}/s</div></div>
                     <div class="bg-white border border-slate-200 p-5 rounded-xl border border-slate-200 shadow-lg shadow-indigo-100/30 text-center"><div class="text-[10px] text-slate-400 font-bold mb-1 tracking-widest">UPLOAD</div><div class="text-2xl font-semibold text-blue-500 truncate">↑ {{ formatBytes(globalSpeedOut) }}/s</div></div>
                 </div>
 
-                <div class="kui-surface p-5 md:p-6 flex flex-col md:flex-row gap-4 items-end">
-                    <div class="flex-1"><label class="block text-xs font-bold text-slate-400 mb-2 pl-2">服务器别名</label><input v-model="newVps.name" placeholder="例如: 日本软银 01" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl transition hover:bg-white focus:bg-white"></div>
-                    <div class="flex-1"><label class="block text-xs font-bold text-slate-400 mb-2 pl-2">公网 IP</label><input v-model="newVps.ip" placeholder="8.8.8.8" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl transition hover:bg-white focus:bg-white"></div>
-                    <div class="w-full md:w-48"><label class="block text-xs font-bold text-slate-400 mb-2 pl-2">系统架构</label><select v-model="newVps.os" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl transition hover:bg-white focus:bg-white outline-none font-medium text-slate-700"><option value="debian">Ubuntu / Debian</option><option value="alpine">Alpine Linux</option></select></div>
-                    <button @click="addVps" class="bg-slate-800 text-white px-8 py-3.5 rounded-2xl font-bold hover:bg-black transition-all shadow-lg whitespace-nowrap">接入机器</button>
-                </div>
-
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                <div v-if="nodeWorkspace === 'detail' && !detailLoading && !detailError" class="grid grid-cols-1 xl:grid-cols-2 gap-8">
                     <div v-for="vps in servers" :key="vps.ip" class="bg-white border border-slate-200 rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden transition-all hover:shadow-sm">
                         <div class="p-6 md:p-8 relative">
                             <div class="flex justify-between items-start mb-4">
@@ -541,9 +631,9 @@
                                 <div v-if="['XTLS-Reality', 'H2-Reality', 'gRPC-Reality'].includes(newNodeParams[vps.ip].protocol)" class="bg-slate-100/50 p-3 rounded-xl mb-3"><input v-model="newNodeParams[vps.ip].sni" :list="'sni-rec-' + vps.ip" placeholder="伪装域名: 支持手填或下拉" class="w-full bg-transparent outline-none text-sm font-medium text-slate-700"><datalist :id="'sni-rec-' + vps.ip"><option value="addons.mozilla.org"></option><option value="www.apple.com"></option><option value="gateway.icloud.com"></option><option value="itunes.apple.com"></option><option value="www.microsoft.com"></option></datalist></div>
                                 <div v-if="['TUIC', 'Hysteria2', 'Trojan', 'AnyTLS', 'Naive'].includes(newNodeParams[vps.ip].protocol)" class="bg-slate-100/50 p-3 rounded-xl mb-3"><input v-model="newNodeParams[vps.ip].sni" placeholder="SNI 域名 / 主机名" class="w-full bg-transparent outline-none text-sm font-medium text-slate-700"></div>
                                 <div v-if="newNodeParams[vps.ip].protocol === 'dokodemo-door'" class="bg-slate-100/50 p-3 rounded-xl mb-3 space-y-2">
-                                    <select v-model="newNodeParams[vps.ip].relay_type" class="w-full bg-white p-2 rounded-lg text-sm"><option value="external">外部目标地址</option><option value="internal">面板内部节点</option></select>
+                                    <select v-model="newNodeParams[vps.ip].relay_type" @change="onRelayTypeChange(vps.ip)" class="w-full bg-white p-2 rounded-lg text-sm"><option value="external">外部目标地址</option><option value="internal">面板内部节点</option></select>
                                     <div v-if="newNodeParams[vps.ip].relay_type === 'external'" class="grid grid-cols-2 gap-2"><input v-model="newNodeParams[vps.ip].target_ip" placeholder="目标 IP/域名" class="bg-white p-2 rounded-lg text-sm"><input v-model.number="newNodeParams[vps.ip].target_port" type="number" placeholder="目标端口" class="bg-white p-2 rounded-lg text-sm"></div>
-                                    <select v-else v-model="newNodeParams[vps.ip].target_id" class="w-full bg-white p-2 rounded-lg text-sm"><option value="">选择目标节点</option><option v-for="target in nodes.filter(n => n.id && n.protocol !== 'dokodemo-door')" :value="target.id">{{ getVpsName(target.vps_ip) }} · {{ target.protocol }}:{{ target.port }}</option></select>
+                                    <div v-else class="space-y-2"><input v-model="internalTargetQuery[vps.ip]" @input="queueInternalTargetSearch(vps.ip)" @focus="loadInternalTargetOptions(vps.ip)" placeholder="搜索目标节点 ID、协议或端口" class="w-full bg-white p-2 rounded-lg text-sm"><select v-model="newNodeParams[vps.ip].target_id" @focus="loadInternalTargetOptions(vps.ip)" class="w-full bg-white p-2 rounded-lg text-sm"><option value="">选择目标节点</option><option v-for="target in internalTargetOptions[vps.ip] || []" :value="target.id">{{ target.protocol }}:{{ target.port }} · {{ target.id }}</option></select><div v-if="internalTargetLoading[vps.ip]" class="text-[10px] text-slate-400">正在搜索目标节点…</div><div v-else-if="internalTargetHasMore[vps.ip]" class="text-[10px] text-slate-400">仅显示前 {{ FLEET_PAGE_SIZE }} 条结果，请继续缩小搜索范围。</div></div>
                                 </div>
                                 <button @click="addNode(vps.ip)" class="w-full kui-btn kui-btn-solid text-white py-3 rounded-xl font-bold shadow-lg transition-all hover:scale-[1.02]">添加单节点</button>
                             </div>
@@ -600,11 +690,11 @@
                         </div>
 
                         <div class="p-6 md:p-8 bg-slate-50/50 border-t border-slate-200 flex-1">
-                            <div v-for="node in getNodesByIp(vps.ip)" :key="node.id" class="bg-white border border-slate-200 p-4 rounded-2xl mb-3 shadow-sm hover:shadow-md group transition-all">
+                            <div v-for="node in getNodesByIp(vps.ip)" :key="node.id" :data-fleet-node-id="node.id" class="bg-white border border-slate-200 p-4 rounded-2xl mb-3 shadow-sm hover:shadow-md group transition-all">
                                 <div class="flex justify-between items-start mb-3">
                                     <div class="flex-1 overflow-hidden pr-2">
                                         <div class="flex items-center gap-2 mb-1.5"><span class="font-semibold text-slate-700">{{ node.protocol }} <span class="font-mono text-slate-400 text-xs bg-slate-100 px-1.5 rounded">#{{ node.port }}</span></span><span class="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-bold">👤 {{ node.username }}</span><span v-if="node.enable === 0" class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-bold">已停用</span></div>
-                                        <div v-if="node.protocol === 'VLESS-Argo'" class="text-[11px] p-1.5 rounded-lg overflow-hidden text-ellipsis whitespace-nowrap max-w-full inline-block" :class="node.sni.includes('等待') ? 'bg-amber-50 text-amber-600 font-bold' : 'bg-emerald-50 border border-emerald-100 text-emerald-700 font-mono font-bold'">Argo: {{ node.sni }}</div>
+                                        <div v-if="node.protocol === 'VLESS-Argo'" class="text-[11px] p-1.5 rounded-lg overflow-hidden text-ellipsis whitespace-nowrap max-w-full inline-block" :class="(node.sni || '').includes('等待') ? 'bg-amber-50 text-amber-600 font-bold' : 'bg-emerald-50 border border-emerald-100 text-emerald-700 font-mono font-bold'">Argo: {{ node.sni || '等待 VPS 回传域名' }}</div>
                                         <div v-else-if="node.sni" class="text-[11px] bg-slate-50 text-slate-500 p-1.5 rounded-lg overflow-hidden text-ellipsis font-mono inline-block">SNI: {{ node.sni }}</div>
                                     </div>
                                     <div class="flex gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"><button @click="toggleNode(node.id, node.enable === 1 ? 0 : 1)" class="text-[11px] px-2 py-1 rounded-md bg-white border border-slate-200 hover:bg-slate-50 font-bold text-slate-600 shadow-sm">{{ node.enable === 1 ? '停用' : '启用' }}</button><button @click="deleteNode(node.id)" class="text-rose-500 text-[11px] px-2 py-1 bg-white border border-rose-100 rounded-md hover:bg-rose-50 font-bold shadow-sm">删除</button></div>
@@ -612,7 +702,13 @@
                                 <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden"><div :class="(node.traffic_limit > 0 && node.traffic_used >= node.traffic_limit) ? 'bg-rose-400' : 'bg-slate-800'" class="h-1.5 rounded-full transition-all duration-500" :style="{ width: getTrafficPercent(node.traffic_used, node.traffic_limit) + '%' }"></div></div>
                                 <div class="flex justify-between text-[10px] text-slate-400 mt-2 font-medium"><span>已用: {{ formatBytes(node.traffic_used) }} <span v-if="node.traffic_limit > 0">/ {{ formatBytes(node.traffic_limit) }}</span></span><div class="flex gap-3"><span v-if="node.expire_time > 0">到期: {{ formatDate(node.expire_time) }}</span><button v-if="node.traffic_used > 0" @click="resetTraffic(node.id)" class="text-indigo-500 hover:underline font-bold">清零</button></div></div>
                             </div>
-                            <div v-if="getNodesByIp(vps.ip).length === 0" class="text-center text-slate-400 text-xs py-6 border-2 border-dashed border-slate-200 rounded-2xl font-medium">节点矩阵为空，请在上方一键下发建立</div>
+                            <div v-if="getNodesByIp(vps.ip).length === 0 && !detailNodesLoading" class="text-center text-slate-400 text-xs py-6 border-2 border-dashed border-slate-200 rounded-2xl font-medium">节点矩阵为空，请在上方一键下发建立</div>
+                            <div v-if="detailNodesLoading && !getNodesByIp(vps.ip).length" class="py-6 text-center text-xs font-medium text-slate-400">正在读取节点…</div>
+                            <div class="mt-4 flex flex-col items-center gap-2" v-if="detailNodesHasMore || getNodesByIp(vps.ip).length">
+                                <div class="text-[10px] font-medium text-slate-400">节点用量更新于 {{ formatUpdatedAt(nodeMetricsUpdatedAt) }}</div>
+                                <div v-if="detailHasOlder || detailHasNewer" class="flex flex-wrap items-center justify-center gap-3 text-[10px] text-slate-400"><button v-if="detailHasOlder" @click="showEarlierDetailPages" class="kui-btn border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-50">较早已加载</button><span>{{ detailWindowLabel }}</span><button v-if="detailHasNewer" @click="showLaterDetailPages" class="kui-btn border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-50">较新已加载</button></div>
+                                <button v-if="detailNodesHasMore" @click="loadDetailNodes(false)" :disabled="detailNodesLoading" class="kui-btn border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">加载更多节点</button>
+                            </div>
                         </div>
 
                         <div class="p-4 md:p-6 bg-slate-100/50 border-t border-slate-200 flex flex-col gap-3">
@@ -1142,6 +1238,33 @@
                 const currentDomain = window.location.origin;
 
                 const servers = ref([]); const nodes = ref([]); const users = ref([]);
+                // Fleet views deliberately keep their own bounded page state. `servers` and
+                // `nodes` remain the selected-machine workspace for the existing controls.
+                const FLEET_PAGE_SIZE = 50;
+                // Cursor loading can continue indefinitely, but rendering stays bounded.
+                const FLEET_RENDER_LIMIT = 200;
+                const FLEET_RENDER_PAGE_COUNT = Math.max(1, Math.floor(FLEET_RENDER_LIMIT / FLEET_PAGE_SIZE));
+                const nodeWorkspace = ref('servers');
+                const fleetServers = ref([]); const fleetServersCursor = ref(''); const fleetServersHasMore = ref(false);
+                const fleetServersLoading = ref(false); const fleetServersError = ref('');
+                const fleetServerQuery = ref(''); const fleetServerStatus = ref(''); const fleetServerEgress = ref('');
+                const inventoryPages = ref([]); const inventoryWindowStart = ref(0); const inventoryCursor = ref(''); const inventoryHasMore = ref(false);
+                const inventoryNodes = computed(() => inventoryPages.value.slice(inventoryWindowStart.value, inventoryWindowStart.value + FLEET_RENDER_PAGE_COUNT).flatMap(page => page.nodes));
+                const inventoryHasOlder = computed(() => inventoryWindowStart.value > 0);
+                const inventoryHasNewer = computed(() => inventoryWindowStart.value + FLEET_RENDER_PAGE_COUNT < inventoryPages.value.length);
+                const inventoryWindowLabel = computed(() => `第 ${inventoryWindowStart.value + 1}-${Math.min(inventoryWindowStart.value + FLEET_RENDER_PAGE_COUNT, inventoryPages.value.length)} 页`);
+                const inventoryLoading = ref(false); const inventoryError = ref('');
+                const inventoryQuery = ref(''); const inventoryServerFilter = ref(''); const inventoryProtocol = ref(''); const inventoryUsername = ref(''); const inventoryState = ref('');
+                const selectedServer = ref(null); const selectedServerIp = ref(''); const detailLoading = ref(false); const detailError = ref('');
+                const detailNodePages = ref([]); const detailWindowStart = ref(0); const detailNodesCursor = ref(''); const detailNodesHasMore = ref(false); const detailNodesLoading = ref(false);
+                const detailHasOlder = computed(() => detailWindowStart.value > 0);
+                const detailHasNewer = computed(() => detailWindowStart.value + FLEET_RENDER_PAGE_COUNT < detailNodePages.value.length);
+                const detailWindowLabel = computed(() => `第 ${detailWindowStart.value + 1}-${Math.min(detailWindowStart.value + FLEET_RENDER_PAGE_COUNT, detailNodePages.value.length)} 页`);
+                const nodeMetricsUpdatedAt = ref(0); let nodeMetricsTimer = null; let nodeMetricsInFlight = false; let nodeMetricsObserver = null;
+                const visibleNodeMetricIds = new Set();
+                const managedServerIps = ref([]);
+                const internalTargetOptions = reactive({}); const internalTargetQuery = reactive({}); const internalTargetLoading = reactive({}); const internalTargetHasMore = reactive({});
+                const internalTargetTimers = new Map(); const internalTargetRequests = new Map(); const internalTargetControllers = new Map();
                 const realtimeUrl = ref('');
                 const realtimeConnected = ref(false);
                 let realtimeSocket = null; let realtimeReconnectTimer = null; let realtimeFallbackTimer = null; let realtimeConnectTimer = null; let realtimePingTimer = null; let realtimeGeneration = 0; let realtimeDisconnectedAt = 0; let lastRealtimePing = 0; let realtimeRetryDelay = 5000;
@@ -1198,7 +1321,16 @@
                 
                 const showWelcomePopup = ref(false);
 
-                watch(activeTab, (val) => { localStorage.setItem('monitor_preferred_tab', val); if (val === 'proxy' && isLoggedIn.value) { loadProxyPool(); setTimeout(pcInitProxy, 0); } else { pcStopProxy(); } if (val === 'thirdparty') loadThirdPartySubscriptions(); if (val === 'settings' && isLoggedIn.value && role.value === 'admin') loadAdminProbeServers(); if (val === 'probe') { updateCustomStyles(); updateCustomScript(probeSys.custom_script); } else { document.body.className = ''; document.getElementById('kui-custom-styles')?.remove(); document.getElementById('kui-custom-head')?.remove(); updateCustomScript(''); } });
+                watch(activeTab, (val) => {
+                    localStorage.setItem('monitor_preferred_tab', val);
+                    if (val === 'proxy' && isLoggedIn.value) { loadProxyPool(); setTimeout(pcInitProxy, 0); } else { pcStopProxy(); }
+                    if (val === 'nodes' && isLoggedIn.value && role.value === 'admin') refreshFleetWorkspace(); else stopNodeMetricsPolling();
+                    if (val === 'thirdparty') loadThirdPartySubscriptions();
+                    if (val === 'settings' && isLoggedIn.value && role.value === 'admin') loadAdminProbeServers();
+                    if (val === 'probe') { updateCustomStyles(); updateCustomScript(probeSys.custom_script); }
+                    else { document.body.className = ''; document.getElementById('kui-custom-styles')?.remove(); document.getElementById('kui-custom-head')?.remove(); updateCustomScript(''); }
+                });
+                watch(nodeWorkspace, () => { if (activeTab.value === 'nodes') startNodeMetricsPolling(); });
                 watch(probeView, (val) => localStorage.setItem('monitor_preferred_view', val));
 
                 const hasCustomCssFlag = computed(() => {
@@ -1325,6 +1457,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
 
                 const globalOnline = computed(() => servers.value.filter(s => isOnline(s.last_report, s.realtime_state)).length);
                 const globalTraffic = computed(() => nodes.value.reduce((sum, n) => sum + (parseFloat(n.traffic_used) || 0), 0));
+                const selectedServerTraffic = computed(() => Number(selectedServer.value?.node_summary?.traffic_used ?? globalTraffic.value ?? 0));
                 const globalSpeedIn = computed(() => servers.value.reduce((sum, s) => sum + (parseFloat(s.net_in_speed) || 0), 0));
                 const globalSpeedOut = computed(() => servers.value.reduce((sum, s) => sum + (parseFloat(s.net_out_speed) || 0), 0));
 
@@ -1377,7 +1510,10 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     if (!authKey.value || !currentUser.value || role.value !== 'admin') return {};
                     return { 'Authorization': `Bearer ${authKey.value}` };
                 };
-                window.kuiManagedServerIps = () => servers.value.map(server => server.ip).filter(Boolean);
+                window.kuiManagedServerIps = async () => {
+                    await loadManagedServerIps(true);
+                    return managedServerIps.value.slice();
+                };
 
                 const login = async () => {
                     if (!loginUser.value) loginUser.value = 'admin';
@@ -1389,12 +1525,14 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                             localStorage.setItem('kui_auth_key', authKey.value); localStorage.setItem('kui_user', currentUser.value); localStorage.setItem('kui_role', role.value);
                             isLoggedIn.value = true; showLoginModal.value = false; password.value = ''; const publicSocket = publicRealtimeSocket; publicRealtimeSocket = null; publicSocket?.close(); clearTimeout(publicRealtimeReconnectTimer); clearTimeout(publicRealtimeFallbackTimer); clearInterval(publicRealtimeActivityTimer);
                             activeTab.value = role.value === 'admin' ? 'nodes' : 'dashboard';
+                            if (role.value === 'admin') loadManagedServerIps();
+                            await loadSessionMeta();
                             startPolling(); fetchProbeData(); queueMicrotask(connectRealtime);
                         } else alert('⚠️ 账户名或密码错误');
                     } catch (e) { alert('登录异常'); }
                 };
                 
-                const clearPrivateState = () => { servers.value = []; nodes.value = []; users.value = []; adminProbeServers.value = []; mySubToken.value = ''; probeDetailId.value = null; probeDetail.value = {}; window.kuiRealtimeProxySnapshots = {}; };
+                const clearPrivateState = () => { fleetServersRequest++; fleetServerMetricsRequest++; inventoryRequest++; detailNodesRequest++; selectedServerDetailRequest++; managedServerIpsRequest++; sessionMetaRequest++; fleetServersController?.abort(); fleetServerMetricsController?.abort(); inventoryController?.abort(); detailNodesController?.abort(); selectedServerDetailController?.abort(); managedServerIpsController?.abort(); sessionMetaController?.abort(); servers.value = []; nodes.value = []; users.value = []; fleetServers.value = []; inventoryPages.value = []; inventoryWindowStart.value = 0; detailNodePages.value = []; detailWindowStart.value = 0; selectedServer.value = null; selectedServerIp.value = ''; managedServerIps.value = []; nodeWorkspace.value = 'servers'; adminProbeServers.value = []; mySubToken.value = ''; nodeMetricsUpdatedAt.value = 0; stopNodeMetricsPolling(); stopNodeMetricsObserver(); probeDetailId.value = null; probeDetail.value = {}; window.kuiRealtimeProxySnapshots = {}; };
                 const logout = () => { authGeneration++; localStorage.removeItem('kui_auth_key'); localStorage.removeItem('kui_user'); localStorage.removeItem('kui_role'); isLoggedIn.value = false; currentUser.value = ''; authKey.value = ''; clearPrivateState(); activeTab.value = 'probe'; realtimeGeneration++; realtimeDisconnectedAt = 0; clearTimeout(realtimeFallbackTimer); clearTimeout(realtimeReconnectTimer); clearTimeout(realtimeConnectTimer); clearInterval(realtimePingTimer); const socket = realtimeSocket; realtimeSocket = null; socket?.close(); realtimeConnected.value = false; window.kuiRealtimeConnected = false; stopPolling(); startProbePolling();};
                 const sendUiPing = async () => { try { await fetchApi('/api/ui_ping', { method: 'POST' }); } catch(e) {} };
 
@@ -1536,7 +1674,341 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         isLoadingAdminProbeServers = false;
                     }
                 };
-                const refreshData = async () => {
+
+                let fleetServersRequest = 0; let fleetServerMetricsRequest = 0; let inventoryRequest = 0; let detailNodesRequest = 0; let selectedServerDetailRequest = 0; let managedServerIpsRequest = 0; let sessionMetaRequest = 0;
+                let fleetServersFilterSignature = ''; let inventoryFilterSignature = '';
+                let fleetServersController = null; let fleetServerMetricsController = null; let inventoryController = null; let detailNodesController = null; let selectedServerDetailController = null; let managedServerIpsController = null; let sessionMetaController = null;
+                const pagedItems = (data, key) => Array.isArray(data) ? data : (Array.isArray(data?.[key]) ? data[key] : []);
+                const hasMore = data => Boolean(data?.has_more ?? data?.hasMore);
+                const nextCursor = data => String(data?.next_cursor ?? data?.nextCursor ?? '');
+                const serverNodeCount = server => Number(server?.node_count ?? server?.nodes_count ?? server?.nodeCount ?? 0);
+                const serverTrafficUsed = server => Number(server?.node_traffic_used ?? server?.traffic_used ?? server?.trafficUsed ?? 0);
+                const serverHealthLabel = server => {
+                    if (server?.realtime_state === 'stale' || server?.status === 'stale') return '状态滞后';
+                    if (server?.realtime_state === 'online') return '在线';
+                    if (server?.realtime_state === 'offline') return '离线';
+                    return server?.status === 'online' ? '在线' : (server?.status === 'offline' ? '离线' : (isOnline(server?.last_report, '') ? '在线' : '离线'));
+                };
+                const serverHealthClass = server => serverHealthLabel(server) === '状态滞后' ? 'bg-amber-100 text-amber-700' : (serverHealthLabel(server) === '在线' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700');
+                const formatUpdatedAt = timestamp => timestamp ? new Date(timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '尚未刷新';
+                const applySessionMeta = (data) => {
+                    const meta = data?.meta || data || {};
+                    const nextTitle = meta.site_title ?? meta.siteTitle;
+                    const nextRealtimeUrl = meta.realtime_url ?? meta.realtimeUrl;
+                    const nextSubToken = meta.my_sub_token ?? meta.mySubToken;
+                    if (nextTitle) { siteTitle.value = nextTitle; siteTitleInput.value = nextTitle; }
+                    if (nextSubToken) mySubToken.value = nextSubToken;
+                    if (nextRealtimeUrl && nextRealtimeUrl !== realtimeUrl.value) { realtimeUrl.value = nextRealtimeUrl; queueMicrotask(connectRealtime); }
+                };
+                const applyFleetMeta = data => applySessionMeta(data?.meta);
+                const prepareServerWorkspace = server => {
+                    if (!server?.ip) return;
+                    if (!newNodeParams[server.ip]) newNodeParams[server.ip] = { protocol: 'XTLS-Reality', port: 443, username: 'admin', sni: '', relay_type: 'external', target_ip: '', target_port: '', target_id: '', traffic_limit_gb: '', expire_date: '' };
+                    if (!deployOsMap[server.ip]) deployOsMap[server.ip] = 'debian';
+                    if (!batchStartPort[server.ip]) batchStartPort[server.ip] = '';
+                    if (!batchUser[server.ip]) batchUser[server.ip] = 'admin';
+                    if (server.egress_mode === 'socks5' || server.socks5_addr) {
+                        server._socks5_addr = server.socks5_addr || ''; server._socks5_port = server.socks5_port || 1080;
+                        server._socks5_user = server.socks5_user || ''; server._socks5_pass = server.socks5_pass || '';
+                    }
+                };
+                const mergeByKey = (existing, incoming, key) => {
+                    const seen = new Set(existing.map(item => item?.[key]));
+                    return existing.concat(incoming.filter(item => !seen.has(item?.[key])));
+                };
+                const loadManagedServerIps = async (force = false) => {
+                    if (!isLoggedIn.value || role.value !== 'admin') return [];
+                    if (!force && managedServerIps.value.length) return managedServerIps.value;
+                    const request = ++managedServerIpsRequest;
+                    managedServerIpsController?.abort(); managedServerIpsController = new AbortController();
+                    try {
+                        const data = await (await fetchApi('/api/servers/ips', { signal: managedServerIpsController.signal })).json();
+                        if (request !== managedServerIpsRequest) return managedServerIps.value;
+                        managedServerIps.value = Array.isArray(data?.ips) ? data.ips.filter(Boolean) : [];
+                    } catch (error) {
+                        if (request === managedServerIpsRequest && error?.name !== 'AbortError') console.warn('[fleet] failed to load managed server IPs', error);
+                    }
+                    return managedServerIps.value;
+                };
+                const getFleetServerFilterSignature = () => JSON.stringify([fleetServerQuery.value.trim(), fleetServerStatus.value, fleetServerEgress.value]);
+                const loadFleetServers = async (reset = true) => {
+                    if (!isLoggedIn.value || role.value !== 'admin') return;
+                    const filterSignature = getFleetServerFilterSignature();
+                    const shouldReset = reset || filterSignature !== fleetServersFilterSignature;
+                    const cursor = shouldReset ? '' : fleetServersCursor.value;
+                    if (!shouldReset && (!cursor || fleetServersLoading.value)) return;
+                    const request = ++fleetServersRequest;
+                    fleetServersController?.abort(); fleetServersController = new AbortController();
+                    fleetServersLoading.value = true; fleetServersError.value = '';
+                    try {
+                        const params = new URLSearchParams({ limit: String(FLEET_PAGE_SIZE) });
+                        if (cursor) params.set('cursor', cursor);
+                        if (fleetServerQuery.value.trim()) params.set('q', fleetServerQuery.value.trim());
+                        if (fleetServerStatus.value) params.set('status', fleetServerStatus.value);
+                        if (fleetServerEgress.value) params.set('egress', fleetServerEgress.value);
+                        const data = await (await fetchApi(`/api/servers?${params}`, { signal: fleetServersController.signal })).json();
+                        if (request !== fleetServersRequest) return;
+                        const page = pagedItems(data, 'servers');
+                        fleetServers.value = shouldReset ? page : mergeByKey(fleetServers.value, page, 'ip');
+                        fleetServersHasMore.value = hasMore(data); fleetServersCursor.value = nextCursor(data);
+                        fleetServersFilterSignature = filterSignature;
+                        applyFleetMeta(data);
+                    } catch (error) {
+                        if (request === fleetServersRequest && error?.name !== 'AbortError') fleetServersError.value = error.message || '服务器概览读取失败';
+                    } finally {
+                        if (request === fleetServersRequest) fleetServersLoading.value = false;
+                    }
+                };
+                const refreshVisibleServerMetrics = async () => {
+                    if (!isLoggedIn.value || role.value !== 'admin' || !fleetServers.value.length) return;
+                    const filterSignature = getFleetServerFilterSignature();
+                    const request = ++fleetServerMetricsRequest;
+                    fleetServerMetricsController?.abort(); fleetServerMetricsController = new AbortController();
+                    try {
+                        const params = new URLSearchParams({ limit: '100' });
+                        if (fleetServerQuery.value.trim()) params.set('q', fleetServerQuery.value.trim());
+                        if (fleetServerStatus.value) params.set('status', fleetServerStatus.value);
+                        if (fleetServerEgress.value) params.set('egress', fleetServerEgress.value);
+                        const data = await (await fetchApi(`/api/servers?${params}`, { signal: fleetServerMetricsController.signal })).json();
+                        if (request !== fleetServerMetricsRequest || filterSignature !== getFleetServerFilterSignature()) return;
+                        const updates = new Map(pagedItems(data, 'servers').map(server => [server.ip, server]));
+                        fleetServers.value.forEach(server => { const update = updates.get(server.ip); if (update) Object.assign(server, update); });
+                        applyFleetMeta(data);
+                    } catch (error) {
+                        if (request === fleetServerMetricsRequest && error?.name !== 'AbortError') console.warn('[fleet] failed to refresh visible server metrics', error);
+                    }
+                };
+                const loadSessionMeta = async () => {
+                    if (!isLoggedIn.value) return;
+                    const request = ++sessionMetaRequest;
+                    sessionMetaController?.abort(); sessionMetaController = new AbortController();
+                    try {
+                        const response = await fetchApi('/api/session', { signal: sessionMetaController.signal });
+                        if (!response.ok) throw new Error(`Session metadata request failed: ${response.status}`);
+                        const data = await response.json();
+                        if (request === sessionMetaRequest) applySessionMeta(data);
+                    } catch (error) {
+                        if (request === sessionMetaRequest && error?.name !== 'AbortError') console.warn('[session] failed to load session metadata', error);
+                    }
+                };
+                const observeVisibleNodeRows = () => {
+                    visibleNodeMetricIds.clear();
+                    nodeMetricsObserver?.disconnect(); nodeMetricsObserver = null;
+                    const rows = [...document.querySelectorAll('[data-fleet-node-id]')];
+                    const syncViewportRows = () => rows.forEach(row => {
+                        const id = row.dataset.fleetNodeId;
+                        const rect = row.getBoundingClientRect();
+                        if (id && rect.bottom >= -120 && rect.top <= window.innerHeight + 120) visibleNodeMetricIds.add(id);
+                    });
+                    syncViewportRows();
+                    if (!rows.length || !('IntersectionObserver' in window)) return;
+                    nodeMetricsObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+                        const id = entry.target.dataset.fleetNodeId;
+                        if (!id) return;
+                        if (entry.isIntersecting) visibleNodeMetricIds.add(id); else visibleNodeMetricIds.delete(id);
+                    }), { rootMargin: '120px 0px' });
+                    rows.forEach(row => nodeMetricsObserver.observe(row));
+                };
+                const stopNodeMetricsObserver = () => { nodeMetricsObserver?.disconnect(); nodeMetricsObserver = null; visibleNodeMetricIds.clear(); };
+                const refreshVisibleNodeMetrics = async () => {
+                    if (nodeMetricsInFlight || document.hidden || activeTab.value !== 'nodes') return;
+                    const ids = [...visibleNodeMetricIds];
+                    if (!ids.length) return;
+                    nodeMetricsInFlight = true;
+                    try {
+                        const chunks = Array.from({ length: Math.ceil(ids.length / 100) }, (_, index) => ids.slice(index * 100, index * 100 + 100));
+                        const payloads = await Promise.all(chunks.map(async chunk => (await (await fetchApi(`/api/nodes?ids=${encodeURIComponent(chunk.join(','))}`)).json())));
+                        const updates = payloads.flatMap(data => pagedItems(data, 'nodes').length ? pagedItems(data, 'nodes') : (Array.isArray(data?.metrics) ? data.metrics : []));
+                        const byId = new Map(updates.map(node => [String(node.id), node]));
+                        for (const list of [inventoryNodes.value, nodes.value]) list.forEach(node => { const update = byId.get(String(node.id)); if (update) Object.assign(node, update); });
+                        nodeMetricsUpdatedAt.value = Date.now();
+                    } catch (_) {
+                        // The paged list remains usable when the optional freshness request fails.
+                    } finally { nodeMetricsInFlight = false; }
+                };
+                const refreshVisibleNodeRows = async () => { await nextTick(); observeVisibleNodeRows(); refreshVisibleNodeMetrics(); };
+                const setDetailNodeWindow = () => {
+                    nodes.value = detailNodePages.value.slice(detailWindowStart.value, detailWindowStart.value + FLEET_RENDER_PAGE_COUNT).flatMap(page => page.nodes);
+                };
+                const showEarlierInventoryPages = async () => {
+                    inventoryWindowStart.value = Math.max(0, inventoryWindowStart.value - FLEET_RENDER_PAGE_COUNT);
+                    await refreshVisibleNodeRows();
+                };
+                const showLaterInventoryPages = async () => {
+                    inventoryWindowStart.value = Math.min(Math.max(0, inventoryPages.value.length - FLEET_RENDER_PAGE_COUNT), inventoryWindowStart.value + FLEET_RENDER_PAGE_COUNT);
+                    await refreshVisibleNodeRows();
+                };
+                const showEarlierDetailPages = async () => {
+                    detailWindowStart.value = Math.max(0, detailWindowStart.value - FLEET_RENDER_PAGE_COUNT);
+                    setDetailNodeWindow(); await refreshVisibleNodeRows();
+                };
+                const showLaterDetailPages = async () => {
+                    detailWindowStart.value = Math.min(Math.max(0, detailNodePages.value.length - FLEET_RENDER_PAGE_COUNT), detailWindowStart.value + FLEET_RENDER_PAGE_COUNT);
+                    setDetailNodeWindow(); await refreshVisibleNodeRows();
+                };
+                const syncCachedNodeState = node => {
+                    if (Number(node.enable) !== 1) node.state = 'disabled';
+                    else if (Number(node.expire_time || 0) > 0 && Number(node.expire_time) <= Date.now()) node.state = 'expired';
+                    else if (Number(node.traffic_limit || 0) > 0 && Number(node.traffic_used || 0) >= Number(node.traffic_limit)) node.state = 'over_quota';
+                    else node.state = 'active';
+                };
+                const patchCachedNode = (id, patch) => {
+                    for (const pages of [inventoryPages.value, detailNodePages.value]) {
+                        for (const page of pages) {
+                            const node = page.nodes.find(item => item.id === id);
+                            if (node) { Object.assign(node, patch); syncCachedNodeState(node); }
+                        }
+                    }
+                };
+                const removeCachedNode = id => {
+                    inventoryPages.value = inventoryPages.value.map(page => ({ ...page, nodes: page.nodes.filter(node => node.id !== id) })).filter(page => page.nodes.length);
+                    detailNodePages.value = detailNodePages.value.map(page => ({ ...page, nodes: page.nodes.filter(node => node.id !== id) })).filter(page => page.nodes.length);
+                    inventoryWindowStart.value = Math.min(inventoryWindowStart.value, Math.max(0, inventoryPages.value.length - FLEET_RENDER_PAGE_COUNT));
+                    detailWindowStart.value = Math.min(detailWindowStart.value, Math.max(0, detailNodePages.value.length - FLEET_RENDER_PAGE_COUNT));
+                    setDetailNodeWindow();
+                };
+                const loadInventoryNodes = async (reset = true) => {
+                    if (!isLoggedIn.value || role.value !== 'admin') return;
+                    const filterSignature = JSON.stringify([inventoryQuery.value.trim(), inventoryServerFilter.value.trim(), inventoryProtocol.value, inventoryUsername.value.trim(), inventoryState.value]);
+                    const shouldReset = reset || filterSignature !== inventoryFilterSignature;
+                    const cursor = shouldReset ? '' : inventoryCursor.value;
+                    if (!shouldReset && (!cursor || inventoryLoading.value)) return;
+                    const request = ++inventoryRequest;
+                    inventoryController?.abort(); inventoryController = new AbortController();
+                    inventoryLoading.value = true; inventoryError.value = '';
+                    try {
+                        const params = new URLSearchParams({ limit: String(FLEET_PAGE_SIZE) });
+                        if (cursor) params.set('cursor', cursor);
+                        if (inventoryQuery.value.trim()) params.set('q', inventoryQuery.value.trim());
+                        if (inventoryServerFilter.value.trim()) params.set('vps_ip', inventoryServerFilter.value.trim());
+                        if (inventoryProtocol.value) params.set('protocol', inventoryProtocol.value);
+                        if (inventoryUsername.value.trim()) params.set('username', inventoryUsername.value.trim());
+                        if (inventoryState.value) params.set('state', inventoryState.value);
+                        const data = await (await fetchApi(`/api/nodes?${params}`, { signal: inventoryController.signal })).json();
+                        if (request !== inventoryRequest) return;
+                        const page = pagedItems(data, 'nodes');
+                        if (shouldReset) { inventoryPages.value = page.length ? [{ nodes: page }] : []; inventoryWindowStart.value = 0; }
+                        else { inventoryPages.value = inventoryPages.value.concat({ nodes: page }); inventoryWindowStart.value = Math.max(0, inventoryPages.value.length - FLEET_RENDER_PAGE_COUNT); }
+                        inventoryHasMore.value = hasMore(data); inventoryCursor.value = nextCursor(data);
+                        inventoryFilterSignature = filterSignature;
+                        applyFleetMeta(data);
+                        await refreshVisibleNodeRows();
+                    } catch (error) {
+                        if (request === inventoryRequest && error?.name !== 'AbortError') inventoryError.value = error.message || '节点库存读取失败';
+                    } finally {
+                        if (request === inventoryRequest) inventoryLoading.value = false;
+                    }
+                };
+                const loadDetailNodes = async (reset = true) => {
+                    const ip = selectedServerIp.value;
+                    if (!ip) return;
+                    const cursor = reset ? '' : detailNodesCursor.value;
+                    if (!reset && (!cursor || detailNodesLoading.value)) return;
+                    const request = ++detailNodesRequest;
+                    detailNodesController?.abort(); detailNodesController = new AbortController();
+                    detailNodesLoading.value = true; detailError.value = '';
+                    try {
+                        const params = new URLSearchParams({ vps_ip: ip, limit: String(FLEET_PAGE_SIZE) });
+                        if (cursor) params.set('cursor', cursor);
+                        const data = await (await fetchApi(`/api/nodes?${params}`, { signal: detailNodesController.signal })).json();
+                        if (request !== detailNodesRequest || selectedServerIp.value !== ip) return;
+                        const page = pagedItems(data, 'nodes');
+                        if (reset) { detailNodePages.value = page.length ? [{ nodes: page }] : []; detailWindowStart.value = 0; }
+                        else { detailNodePages.value = detailNodePages.value.concat({ nodes: page }); detailWindowStart.value = Math.max(0, detailNodePages.value.length - FLEET_RENDER_PAGE_COUNT); }
+                        setDetailNodeWindow();
+                        detailNodesHasMore.value = hasMore(data); detailNodesCursor.value = nextCursor(data);
+                        await refreshVisibleNodeRows();
+                    } catch (error) {
+                        if (request === detailNodesRequest && selectedServerIp.value === ip && error?.name !== 'AbortError') detailError.value = error.message || '该服务器的节点读取失败';
+                    } finally {
+                        if (request === detailNodesRequest) detailNodesLoading.value = false;
+                    }
+                };
+                const loadInternalTargetOptions = async (ip) => {
+                    if (!ip || !isLoggedIn.value || role.value !== 'admin') return;
+                    const request = (internalTargetRequests.get(ip) || 0) + 1;
+                    internalTargetRequests.set(ip, request);
+                    internalTargetControllers.get(ip)?.abort();
+                    const controller = new AbortController(); internalTargetControllers.set(ip, controller);
+                    internalTargetLoading[ip] = true;
+                    try {
+                        const params = new URLSearchParams({ vps_ip: ip, limit: String(FLEET_PAGE_SIZE) });
+                        const query = String(internalTargetQuery[ip] || '').trim();
+                        if (query) params.set('q', query);
+                        const data = await (await fetchApi(`/api/nodes?${params}`, { signal: controller.signal })).json();
+                        if (internalTargetRequests.get(ip) !== request) return;
+                        internalTargetOptions[ip] = pagedItems(data, 'nodes').filter(node => node.id && node.protocol !== 'dokodemo-door');
+                        internalTargetHasMore[ip] = hasMore(data);
+                    } catch (error) {
+                        if (internalTargetRequests.get(ip) === request && error?.name !== 'AbortError') internalTargetOptions[ip] = [];
+                    } finally {
+                        if (internalTargetRequests.get(ip) === request) internalTargetLoading[ip] = false;
+                    }
+                };
+                const queueInternalTargetSearch = ip => {
+                    clearTimeout(internalTargetTimers.get(ip));
+                    internalTargetTimers.set(ip, setTimeout(() => loadInternalTargetOptions(ip), 200));
+                };
+                const onRelayTypeChange = ip => { if (newNodeParams[ip]?.relay_type === 'internal') loadInternalTargetOptions(ip); };
+                const loadSelectedServerDetail = async ({ resetNodes = false, showLoading = true, renderCharts = false } = {}) => {
+                    const ip = selectedServerIp.value;
+                    if (!ip) return;
+                    const request = ++selectedServerDetailRequest;
+                    selectedServerDetailController?.abort(); selectedServerDetailController = new AbortController();
+                    if (showLoading) { detailLoading.value = true; detailError.value = ''; }
+                    try {
+                        const data = await (await fetchApi(`/api/servers/${encodeURIComponent(ip)}`, { signal: selectedServerDetailController.signal })).json();
+                        if (request !== selectedServerDetailRequest || selectedServerIp.value !== ip) return;
+                        const server = data.server || data;
+                        if (!server?.ip) throw new Error('服务器详情响应不完整');
+                        server.node_summary = data.node_summary || server.node_summary || {};
+                        selectedServer.value = server; servers.value = [server]; users.value = Array.isArray(data.users) ? data.users : [];
+                        prepareServerWorkspace(server);
+                        if (resetNodes) await loadDetailNodes(true);
+                        if (renderCharts) { await nextTick(); renderKUICharts(); }
+                    } catch (error) {
+                        if (request === selectedServerDetailRequest && selectedServerIp.value === ip && error?.name !== 'AbortError' && (showLoading || !selectedServer.value)) detailError.value = error.message || '服务器工作台读取失败';
+                    } finally {
+                        if (request === selectedServerDetailRequest && showLoading) detailLoading.value = false;
+                    }
+                };
+                const stopNodeMetricsPolling = () => { if (nodeMetricsTimer) { clearInterval(nodeMetricsTimer); nodeMetricsTimer = null; } };
+                const startNodeMetricsPolling = () => {
+                    stopNodeMetricsPolling();
+                    if (activeTab.value !== 'nodes' || !['inventory', 'detail'].includes(nodeWorkspace.value)) return;
+                    refreshVisibleNodeRows();
+                    nodeMetricsTimer = setInterval(() => { if (!document.hidden) refreshVisibleNodeMetrics(); }, 20000);
+                };
+                const switchNodeWorkspace = target => {
+                    if (!['servers', 'inventory'].includes(target)) return;
+                    nodeWorkspace.value = target; stopNodeMetricsObserver();
+                    if (target === 'servers') loadFleetServers(true); else loadInventoryNodes(true);
+                };
+                const openServerWorkspace = async (ip) => {
+                    if (!ip) return;
+                    selectedServerIp.value = ip; selectedServer.value = null; nodeWorkspace.value = 'detail'; detailError.value = ''; nodes.value = []; detailNodePages.value = []; detailWindowStart.value = 0; detailNodesCursor.value = ''; detailNodesHasMore.value = false; stopNodeMetricsObserver();
+                    await loadSelectedServerDetail({ resetNodes: true, showLoading: true, renderCharts: true });
+                };
+                const backToServerOverview = () => {
+                    selectedServerDetailRequest++; detailNodesRequest++; selectedServerDetailController?.abort(); detailNodesController?.abort();
+                    selectedServer.value = null; selectedServerIp.value = ''; detailError.value = ''; nodes.value = []; detailNodePages.value = []; detailWindowStart.value = 0; users.value = []; servers.value = []; stopNodeMetricsObserver();
+                    nodeWorkspace.value = 'servers'; loadFleetServers(true);
+                };
+                const refreshFleetWorkspace = async ({ preservePages = false } = {}) => {
+                    if (!isLoggedIn.value || role.value !== 'admin' || activeTab.value !== 'nodes') return;
+                    if (nodeWorkspace.value === 'inventory') { if (preservePages && inventoryNodes.value.length) await refreshVisibleNodeMetrics(); else await loadInventoryNodes(true); return; }
+                    if (nodeWorkspace.value === 'detail') { if (preservePages && selectedServer.value) await Promise.all([loadSelectedServerDetail({ showLoading: false }), refreshVisibleNodeMetrics()]); else await Promise.all([loadSelectedServerDetail({ showLoading: !selectedServer.value }), loadDetailNodes(true)]); return; }
+                    if (preservePages && fleetServers.value.length) { await refreshVisibleServerMetrics(); return; }
+                    await loadFleetServers(true);
+                };
+                const refreshNodeListsAfterMutation = async ({ reset = false } = {}) => {
+                    const tasks = [refreshVisibleServerMetrics()];
+                    if (nodeWorkspace.value === 'inventory') tasks.push(reset ? loadInventoryNodes(true) : refreshVisibleNodeMetrics());
+                    if (nodeWorkspace.value === 'detail') tasks.push(reset ? loadDetailNodes(true) : refreshVisibleNodeMetrics(), loadSelectedServerDetail({ showLoading: false }));
+                    await Promise.all(tasks);
+                };
+                const refreshData = async ({ preserveFleetPages = false } = {}) => {
+                    if (activeTab.value === 'nodes' && role.value === 'admin') return refreshFleetWorkspace({ preservePages: preserveFleetPages });
                     if (isFetchingKUI) return; isFetchingKUI = true;
                     try {
                         const res = await fetchApi('/api/data'); const data = await res.json();
@@ -1586,7 +2058,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const toggleUser = async (username, status) => { await fetchApi('/api/users', { method: 'PUT', body: JSON.stringify({ username, enable: status }) }); refreshData(); };
                 const deleteUser = async (username) => { if(confirm('⚠️ 确定删除用户？节点将归还给管理员。')) { await fetchApi(`/api/users?username=${username}`, { method: 'DELETE' }); refreshData(); } };
                 const resetUserTraffic = async (username) => { await fetchApi('/api/users', { method: 'PUT', body: JSON.stringify({ username, reset_traffic: true }) }); refreshData(); };
-                const addVps = async () => { if(!newVps.value.ip || !newVps.value.name) return alert('请输入名称和IP'); deployOsMap[newVps.value.ip] = newVps.value.os; saveOsMap(); await fetchApi('/api/vps', { method: 'POST', body: JSON.stringify({ ip: newVps.value.ip, name: newVps.value.name }) }); newVps.value = { name: '', ip: '', os: 'debian' }; refreshData(); fetchProbeData();};
+                const addVps = async () => { if(!newVps.value.ip || !newVps.value.name) return alert('请输入名称和IP'); deployOsMap[newVps.value.ip] = newVps.value.os; saveOsMap(); await fetchApi('/api/vps', { method: 'POST', body: JSON.stringify({ ip: newVps.value.ip, name: newVps.value.name }) }); newVps.value = { name: '', ip: '', os: 'debian' }; await refreshFleetWorkspace(); fetchProbeData();};
                 const deleteVps = async (ip) => {
                     const uninstall = generateUninstallCmd(ip);
                     const canCopy = uninstall && !uninstall.includes('请先刷新页面');
@@ -1613,7 +2085,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     ].join('\n');
                     if (!confirm(msg)) return;
                     await fetchApi(`/api/vps?ip=${ip}`, { method: 'DELETE' });
-                    refreshData();
+                    if (nodeWorkspace.value === 'detail' && selectedServer.value?.ip === ip) backToServerOverview(); else refreshFleetWorkspace();
                     fetchProbeData();
                 };
                 const egressModeLabel = mode => ({ native: '原生出口', residential: '住宅 IP 代理', warp_ipv4: 'WARP IPv4', warp_ipv6: 'WARP IPv6', warp_dual: 'WARP 双栈', socks5: '手动 SOCKS5' }[mode] || mode);
@@ -1678,6 +2150,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         vps._proxy_categories_dirty = false;
                         vps.socks5_addr = saved.socks5_addr || ''; vps.socks5_port = saved.socks5_port || 0;
                         vps.socks5_user = saved.socks5_user || ''; vps.socks5_pass = saved.socks5_pass || '';
+                        loadFleetServers(true);
                     } catch (error) { vps.egress_mode = prevMode; vps.proxy_mode = prevProxyMode; vps.proxy_categories = prevCats; vps.egress_status = 'failed'; alert(error.message || `出口切换失败，仍保持 ${egressModeLabel(prevMode)}`); }
                 };
 
@@ -1686,7 +2159,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     let limitBytes = p.traffic_limit_gb ? Math.floor(parseFloat(p.traffic_limit_gb) * 1073741824) : 0; let expireTs = expiryTimestamp(p.expire_date);
                     const payload = { id: Date.now().toString(), uuid: crypto.randomUUID(), vps_ip: ip, protocol: p.protocol, port: p.port, username: p.username, traffic_limit: limitBytes, expire_time: expireTs, sni: p.sni || '' };
                     if (['XTLS-Reality', 'H2-Reality', 'gRPC-Reality'].includes(p.protocol)) { const keys = generateRealityKeys(); payload.private_key = keys.privateKey; payload.public_key = keys.publicKey; payload.short_id = keys.shortId; } else if (p.protocol === 'TUIC') { if (!p.sni) return alert('TUIC 必填 SNI！'); payload.private_key = crypto.randomUUID().replace(/-/g, ''); } else if (p.protocol === 'Trojan' || p.protocol === 'AnyTLS') { const array = new Uint8Array(16); crypto.getRandomValues(array); payload.private_key = btoa(String.fromCharCode.apply(null, array)); } else if (p.protocol === 'Naive') { payload.uuid = crypto.randomUUID().replace(/-/g, '').substring(0, 16); payload.private_key = payload.uuid; } else if (p.protocol === 'VLESS-Argo') { payload.sni = '⏳ 正在等待 VPS 自动回传穿透域名...'; } else if (p.protocol === 'dokodemo-door') { payload.relay_type = p.relay_type; if (p.relay_type === 'external') { if (!p.target_ip || !p.target_port) return alert('请填写外部目标地址和端口'); payload.target_ip = p.target_ip; payload.target_port = p.target_port; } else { if (!p.target_id) return alert('请选择内部目标节点'); payload.target_id = p.target_id; } }
-                    await fetchApi('/api/nodes', { method: 'POST', body: JSON.stringify(payload) }); refreshData();
+                    await fetchApi('/api/nodes', { method: 'POST', body: JSON.stringify(payload) }); await refreshNodeListsAfterMutation({ reset: true });
                 };
                 
                 const deployAllProtocols = async (ip) => {
@@ -1700,14 +2173,14 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         if (item.type === 'reality') { const keys = generateRealityKeys(); payload.private_key = keys.privateKey; payload.public_key = keys.publicKey; payload.short_id = keys.shortId; } else if (item.protocol === 'Naive') { payload.uuid = commonUUID.replace(/-/g, '').substring(0, 16); payload.private_key = payload.uuid; } else { const array = new Uint8Array(16); crypto.getRandomValues(array); payload.private_key = btoa(String.fromCharCode.apply(null, array)); }
                         try { await fetchApi('/api/nodes', { method: 'POST', body: JSON.stringify(payload) }); } catch(e) { failures.push(`${item.protocol}: ${e.message || '失败'}`); }
                     }
-                    batchStartPort[ip] = ''; alert(failures.length ? `⚠️ 部分协议部署失败：\n${failures.join('\n')}` : "✅ 极速 8合1 全家桶部署指令已实时发送！"); refreshData();
+                    batchStartPort[ip] = ''; alert(failures.length ? `⚠️ 部分协议部署失败：\n${failures.join('\n')}` : "✅ 极速 8合1 全家桶部署指令已实时发送！"); await refreshNodeListsAfterMutation({ reset: true });
                 };
 
-                const deleteNode = async (id) => { await fetchApi(`/api/nodes?id=${id}`, { method: 'DELETE' }); refreshData(); };
-                const toggleNode = async (id, status) => { await fetchApi('/api/nodes', { method: 'PUT', body: JSON.stringify({ id: id, enable: status }) }); refreshData(); };
-                const resetTraffic = async (id) => { await fetchApi('/api/nodes', { method: 'PUT', body: JSON.stringify({ id: id, reset_traffic: true }) }); refreshData(); };
+                const deleteNode = async (id) => { if (!confirm('确定删除这个节点？此操作不可恢复。')) return; await fetchApi(`/api/nodes?id=${id}`, { method: 'DELETE' }); removeCachedNode(id); await refreshVisibleNodeRows(); await refreshNodeListsAfterMutation(); };
+                const toggleNode = async (id, status) => { await fetchApi('/api/nodes', { method: 'PUT', body: JSON.stringify({ id: id, enable: status }) }); patchCachedNode(id, { enable: status }); await refreshNodeListsAfterMutation({ reset: nodeWorkspace.value === 'inventory' && Boolean(inventoryState.value) }); };
+                const resetTraffic = async (id) => { if (!confirm('确定清零该节点的已用流量？')) return; await fetchApi('/api/nodes', { method: 'PUT', body: JSON.stringify({ id: id, reset_traffic: true }) }); patchCachedNode(id, { traffic_used: 0 }); await refreshNodeListsAfterMutation({ reset: nodeWorkspace.value === 'inventory' && Boolean(inventoryState.value) }); };
                 const getNodesByIp = (ip) => nodes.value.filter(n => n.vps_ip === ip).sort((a, b) => a.port - b.port);
-                const getVpsName = (ip) => servers.value.find(s => s.ip === ip)?.name || ip;
+                const getVpsName = (ip) => servers.value.find(s => s.ip === ip)?.name || fleetServers.value.find(s => s.ip === ip)?.name || ip;
                 
                 const saveOsMap = () => { localStorage.setItem('kui_deploy_os', JSON.stringify(deployOsMap)); };
                 const agentTokenFor = (ip) => servers.value.find(s => s.ip === ip)?.agent_token || '';
@@ -1775,10 +2248,11 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     }
                 };
                 const updateUserPassword = async () => { if(!userNewPassword.value) return alert('请输入新密码'); await fetchApi('/api/user/password', { method: 'PUT', body: JSON.stringify({ password: userNewPassword.value }) }); alert('✅ 密码修改成功！请使用新密码重新登录。'); logout(); };
-                const resetMySubLink = async () => { if(confirm('🚨 危险操作！重置后系统将为您签发全新的 UUID 订阅令牌，原链接将【立即作废】！确定要继续重置吗？')) { await fetchApi('/api/user/sub_token', { method: 'PUT' }); alert('✅ 订阅令牌已刷新！'); refreshData(); } };
+                const resetMySubLink = async () => { if(confirm('🚨 危险操作！重置后系统将为您签发全新的 UUID 订阅令牌，原链接将【立即作废】！确定要继续吗？')) { const response = await fetchApi('/api/user/sub_token', { method: 'PUT' }); const data = await response.json(); if (!response.ok) throw new Error(data.error || '订阅令牌重置失败'); if (data.token) mySubToken.value = data.token; alert('✅ 订阅令牌已刷新！'); } };
                 
                 const generateSubLink = (ip='', format='') => { 
-                    const tokenToUse = mySubToken.value || authKey.value; 
+                    const tokenToUse = mySubToken.value;
+                    if (!tokenToUse) return '';
                     let link = `${currentDomain}/api/sub?user=${encodeURIComponent(currentUser.value)}&token=${encodeURIComponent(tokenToUse)}`;
                     if (ip) link += `&ip=${ip}`;
                     if (format) link += `&format=${format}`;
@@ -1938,16 +2412,15 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const applyRealtimeSnapshot = (snapshot) => {
                     if (!snapshot?.ip) return;
                     const key = normalizeRealtimeKey(snapshot.ip);
-                    const resultServer = servers.value.find(item => normalizeRealtimeKey(item.ip) === key);
+                    const matchingServers = [servers.value, fleetServers.value].flatMap(list => list.filter(item => normalizeRealtimeKey(item.ip) === key));
                     const egressResult = snapshot.core_egress_result || snapshot.core_config_result;
-                    if (resultServer && egressResult?.component === 'egress' && Number(egressResult.revision) === Number(resultServer.egress_revision)) { resultServer.egress_status = egressResult.success ? 'applied' : 'failed'; resultServer.egress_applied_mode = egressResult.applied_mode; resultServer.egress_error = egressResult.error || ''; if (resultServer.egress_status === 'applied') resultServer.egress_applied_revision = egressResult.revision; if (egressResult.egress_ip) resultServer.egress_ip = egressResult.egress_ip; }
+                    if (egressResult?.component === 'egress') matchingServers.forEach(resultServer => { if (Number(egressResult.revision) === Number(resultServer.egress_revision)) { resultServer.egress_status = egressResult.success ? 'applied' : 'failed'; resultServer.egress_applied_mode = egressResult.applied_mode; resultServer.egress_error = egressResult.error || ''; if (resultServer.egress_status === 'applied') resultServer.egress_applied_revision = egressResult.revision; if (egressResult.egress_ip) resultServer.egress_ip = egressResult.egress_ip; } });
                     if (snapshot.core) {
                         const timestamp = Number(snapshot.core_last_seen || snapshot.updated_at || 0);
-                        const server = servers.value.find(item => normalizeRealtimeKey(item.ip) === key);
-                        if (server && timestamp >= Number(server._realtime_ts || server.last_report || 0)) {
+                        matchingServers.forEach(server => { if (timestamp >= Number(server._realtime_ts || server.last_report || 0)) {
                             const core = snapshot.core;
-                            Object.assign(server, { cpu: core.cpu, mem: core.mem, disk: core.disk, load: core.load, uptime: core.uptime, net_in_speed: core.net_in_speed, net_out_speed: core.net_out_speed, tcp_conn: core.tcp_conn, udp_conn: core.udp_conn, last_report: timestamp, realtime_state: snapshot.core_state, boot_id: snapshot.boot_id?.core, sequence: snapshot.sequence?.core, config_result: snapshot.core_config_result, config_result_at: snapshot.core_config_result_at, _realtime_ts: timestamp });
-                        }
+                            Object.assign(server, { cpu: core.cpu, mem: core.mem, disk: core.disk, load: core.load, uptime: core.uptime, net_in_speed: core.net_in_speed, net_out_speed: core.net_out_speed, tcp_conn: core.tcp_conn, udp_conn: core.udp_conn, last_report: timestamp, status: snapshot.core_state || server.status, realtime_state: snapshot.core_state, boot_id: snapshot.boot_id?.core, sequence: snapshot.sequence?.core, config_result: snapshot.core_config_result, config_result_at: snapshot.core_config_result_at, _realtime_ts: timestamp });
+                        } });
                         const core = snapshot.core;
                         const probe = publicProbeServers.value.find(item => normalizeRealtimeKey(item.id) === key);
                         if (probe && timestamp >= Number(probe._realtime_ts || probe.last_updated || 0)) Object.assign(probe, { cpu: core.cpu, ram: core.mem, disk: core.disk, load_avg: core.load, uptime: core.uptime, net_in_speed: core.net_in_speed, net_out_speed: core.net_out_speed, tcp_conn: core.tcp_conn, udp_conn: core.udp_conn, last_updated: timestamp, realtime_state: snapshot.core_state, _realtime_ts: timestamp });
@@ -1980,7 +2453,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         realtimeSocket = socket;
                         clearTimeout(realtimeConnectTimer);
                         realtimeConnectTimer = setTimeout(() => { if (realtimeSocket === socket && socket.readyState === WebSocket.CONNECTING) socket.close(); }, 30000);
-                        socket.onopen = () => { if (realtimeSocket !== socket || generation !== realtimeGeneration) return socket.close(); clearTimeout(realtimeConnectTimer); realtimeDisconnectedAt = 0; realtimeRetryDelay = 5000; lastRealtimePing = Date.now(); realtimeConnected.value = true; window.kuiRealtimeConnected = true; clearTimeout(realtimeFallbackTimer); publicRealtimeSocket?.close(); refreshData(); stopPolling(); stopProbePolling(); pcStopProxy(); clearInterval(realtimePingTimer); realtimePingTimer = setInterval(() => { const now = Date.now(); if (realtimeSocket?.readyState === WebSocket.OPEN && now - lastRealtimePing >= 30000) { realtimeSocket.send('ping'); lastRealtimePing = now; } servers.value.forEach(server => { if (server.realtime_state === 'online' && now - server.last_report > 20000) server.realtime_state = 'stale'; }); publicProbeServers.value.forEach(server => { if (server.realtime_state === 'online' && server.last_updated && now - server.last_updated > 20000) server.realtime_state = 'stale'; }); if (activeTab.value === 'proxy') pcFetchNodes(); }, 5000); };
+                        socket.onopen = () => { if (realtimeSocket !== socket || generation !== realtimeGeneration) return socket.close(); clearTimeout(realtimeConnectTimer); realtimeDisconnectedAt = 0; realtimeRetryDelay = 5000; lastRealtimePing = Date.now(); realtimeConnected.value = true; window.kuiRealtimeConnected = true; clearTimeout(realtimeFallbackTimer); publicRealtimeSocket?.close(); refreshData({ preserveFleetPages: true }); stopPolling(); stopProbePolling(); pcStopProxy(); clearInterval(realtimePingTimer); realtimePingTimer = setInterval(() => { const now = Date.now(); if (realtimeSocket?.readyState === WebSocket.OPEN && now - lastRealtimePing >= 30000) { realtimeSocket.send('ping'); lastRealtimePing = now; } [servers.value, fleetServers.value].flat().forEach(server => { if (server.realtime_state === 'online' && now - server.last_report > 20000) { server.realtime_state = 'stale'; server.status = 'stale'; } }); publicProbeServers.value.forEach(server => { if (server.realtime_state === 'online' && server.last_updated && now - server.last_updated > 20000) server.realtime_state = 'stale'; }); if (activeTab.value === 'proxy') pcFetchNodes(); }, 5000); };
                         socket.onmessage = event => { if (realtimeSocket !== socket) return; try { const message = JSON.parse(event.data); if (message.type === 'snapshot') (message.data || []).forEach(applyRealtimeSnapshot); else if (message.type === 'patch') applyRealtimeSnapshot(message.data); } catch(e) {} };
                         socket.onclose = () => { if (realtimeSocket !== socket) return; clearTimeout(realtimeConnectTimer); clearInterval(realtimePingTimer); realtimeConnected.value = false; window.kuiRealtimeConnected = false; realtimeSocket = null; if (isLoggedIn.value && !document.hidden) { scheduleRealtimeFallback(); clearTimeout(realtimeReconnectTimer); const delay = realtimeRetryDelay; realtimeRetryDelay = Math.min(realtimeRetryDelay * 2, 60000); realtimeReconnectTimer = setTimeout(connectRealtime, delay); } };
                         socket.onerror = () => socket.close();
@@ -2002,7 +2475,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 window.kuiNotifyRealtime = notifyRealtime;
                 const startPolling = () => { 
                     if (realtimeConnected.value) return;
-                    if (!dataTimer) { refreshData(); dataTimer = setInterval(() => { if (isLoggedIn.value && !document.hidden && activeTab.value !== 'probe') refreshData(); }, FALLBACK_DATA_INTERVAL); }
+                    if (!dataTimer) { refreshData({ preserveFleetPages: true }); dataTimer = setInterval(() => { if (isLoggedIn.value && !document.hidden && activeTab.value !== 'probe') refreshData({ preserveFleetPages: true }); }, FALLBACK_DATA_INTERVAL); }
                     if (!pingTimer) { sendUiPing(); pingTimer = setInterval(() => { if (isLoggedIn.value && !document.hidden) sendUiPing(); }, FALLBACK_UI_PING_INTERVAL); }
                 };
                 const startProbePolling = () => { 
@@ -2017,22 +2490,29 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         isLoggedIn.value = true;
                         if (role.value !== 'admin' && activeTab.value === 'proxy') activeTab.value = 'dashboard';
                         if (role.value === 'admin') {
+                            await loadSessionMeta();
                             await refreshData();
+                            loadManagedServerIps();
                             queueMicrotask(connectRealtime);
                         } else startPolling();
                         if (activeTab.value === 'proxy') setTimeout(pcInitProxy, 0);
                     }
                     await fetchProbeData();
                     if (!isLoggedIn.value || role.value !== 'admin') startProbePolling();
-                    document.addEventListener('visibilitychange', () => { if (document.hidden) { realtimeGeneration++; realtimeDisconnectedAt = 0; publicRealtimeDisconnectedAt = 0; stopPolling(); stopProbePolling(); clearInterval(realtimePingTimer); clearInterval(publicRealtimeActivityTimer); clearTimeout(realtimeFallbackTimer); clearTimeout(realtimeReconnectTimer); clearTimeout(publicRealtimeReconnectTimer); const socket = realtimeSocket; realtimeSocket = null; socket?.close(); const publicSocket = publicRealtimeSocket; publicRealtimeSocket = null; publicSocket?.close(); realtimeConnected.value = false; window.kuiRealtimeConnected = false; } else if (isLoggedIn.value && role.value === 'admin' && realtimeUrl.value) { connectRealtime(); scheduleRealtimeFallback(); } else if (!isLoggedIn.value && realtimeUrl.value && probeSys.is_public === 'true') { connectPublicRealtime(); } else { if (isLoggedIn.value) startPolling(); startProbePolling(); } });
+                    document.addEventListener('visibilitychange', () => { if (document.hidden) { realtimeGeneration++; realtimeDisconnectedAt = 0; publicRealtimeDisconnectedAt = 0; stopPolling(); stopProbePolling(); stopNodeMetricsPolling(); stopNodeMetricsObserver(); clearInterval(realtimePingTimer); clearInterval(publicRealtimeActivityTimer); clearTimeout(realtimeFallbackTimer); clearTimeout(realtimeReconnectTimer); clearTimeout(publicRealtimeReconnectTimer); const socket = realtimeSocket; realtimeSocket = null; socket?.close(); const publicSocket = publicRealtimeSocket; publicRealtimeSocket = null; publicSocket?.close(); realtimeConnected.value = false; window.kuiRealtimeConnected = false; } else if (isLoggedIn.value && role.value === 'admin' && realtimeUrl.value) { connectRealtime(); scheduleRealtimeFallback(); if (activeTab.value === 'nodes') startNodeMetricsPolling(); } else if (!isLoggedIn.value && realtimeUrl.value && probeSys.is_public === 'true') { connectPublicRealtime(); } else { if (isLoggedIn.value) startPolling(); startProbePolling(); if (activeTab.value === 'nodes') startNodeMetricsPolling(); } });
                 });
 
                 return { 
-                    isLoggedIn, showLoginModal, loginUser, password, currentUser, role, activeTab, 
-                    servers, nodes, users, newVps, newNodeParams, newUser, 
+                    isLoggedIn, showLoginModal, loginUser, password, currentUser, role, activeTab,
+                    nodeWorkspace, FLEET_PAGE_SIZE, FLEET_RENDER_LIMIT, fleetServers, fleetServersLoading, fleetServersError, fleetServersHasMore, fleetServerQuery, fleetServerStatus, fleetServerEgress,
+                    inventoryNodes, inventoryLoading, inventoryError, inventoryHasMore, inventoryQuery, inventoryServerFilter, inventoryProtocol, inventoryUsername, inventoryState, inventoryHasOlder, inventoryHasNewer, inventoryWindowLabel, internalTargetOptions, internalTargetQuery, internalTargetLoading, internalTargetHasMore,
+                    selectedServer, detailLoading, detailError, detailNodesHasMore, detailNodesLoading, detailHasOlder, detailHasNewer, detailWindowLabel, nodeMetricsUpdatedAt,
+                    switchNodeWorkspace, openServerWorkspace, backToServerOverview, refreshFleetWorkspace, loadFleetServers, loadInventoryNodes, loadDetailNodes, refreshVisibleNodeMetrics, showEarlierInventoryPages, showLaterInventoryPages, showEarlierDetailPages, showLaterDetailPages, loadInternalTargetOptions, queueInternalTargetSearch, onRelayTypeChange,
+                    serverNodeCount, serverTrafficUsed, serverHealthLabel, serverHealthClass, formatUpdatedAt,
+                    servers, nodes, users, newVps, newNodeParams, newUser,
                     login, logout, refreshData, addUser, toggleUser, deleteUser, resetUserTraffic, addVps, deleteVps, addNode, deleteNode, toggleNode, resetTraffic,
                     getNodesByIp, getVpsName, formatBytes, formatDate, getExpireText, getTrafficPercent, getPingColor, isOnline, generateCmd, generateUninstallCmd, vpsCliCommands, generateSubLink, copyCommand,
-                    globalOnline, globalTraffic, globalSpeedIn, globalSpeedOut, deployOsMap, saveOsMap, siteTitle, siteTitleInput, saveSiteTitle, clashRulesInput, clashRulesSaved, clashRulesDefault, clashRuleProvidersInput, clashRuleProvidersSaved, clashRuleTemplates, clashRulesMaxChars, clashRuleProvidersMaxChars, applyClashRuleTemplate, resetClashRulesToDefault, saveClashRules, userNewPassword, updateUserPassword, resetMySubLink, generateUUIDForNewUser, batchStartPort, batchUser, deployAllProtocols,
+                    globalOnline, globalTraffic, selectedServerTraffic, globalSpeedIn, globalSpeedOut, deployOsMap, saveOsMap, siteTitle, siteTitleInput, mySubToken, saveSiteTitle, clashRulesInput, clashRulesSaved, clashRulesDefault, clashRuleProvidersInput, clashRuleProvidersSaved, clashRuleTemplates, clashRulesMaxChars, clashRuleProvidersMaxChars, applyClashRuleTemplate, resetClashRulesToDefault, saveClashRules, userNewPassword, updateUserPassword, resetMySubLink, generateUUIDForNewUser, batchStartPort, batchUser, deployAllProtocols,
                     probeSys, publicProbeServers, filteredProbeServers, probeView, probeDetailId, probeDetail, setProbeView, openProbeDetail, probeGlobalOnline, probeGlobalOffline, probeGlobalSpeedIn, probeGlobalSpeedOut, probeGlobalNetRx, probeGlobalNetTx, filteredProbeGroups, probeCountryStats, currentFilter,
                     saveProbeSettings, saveSubscriptionProtection, adminProbeServers, probeEditModalOpen, editingProbeNode, openProbeEditModal, saveProbeEdit, deleteProbeNode, currentDomain,
                     thirdPartySubscriptions, newThirdParty, loadingThirdParty, loadThirdPartySubscriptions, addThirdPartySubscription, toggleThirdPartySubscription, deleteThirdPartySubscription,
@@ -2090,7 +2570,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
             const val = document.getElementById(`slot-cfg-0`).value.toUpperCase().trim() || 'JP';
             const port = parseInt(document.getElementById(`slot-port`).value) || 7920;
             try {
-                const targets = window.kuiManagedServerIps?.() || [];
+                const targets = await window.kuiManagedServerIps?.() || [];
                 if (!targets.length) throw new Error('暂无已接入 VPS');
                 let text = '';
                 for (const ip of targets) {
@@ -2117,7 +2597,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
             const val = document.getElementById(`slot-cfg-0`).value.toUpperCase().trim() || 'JP';
             const port = parseInt(document.getElementById(`slot-port`).value) || 7920;
             try {
-                const targets = window.kuiManagedServerIps?.() || [];
+                const targets = await window.kuiManagedServerIps?.() || [];
                 if (!targets.length) throw new Error('暂无已接入 VPS');
                 const trigger = Date.now();
                 for (const ip of targets) {

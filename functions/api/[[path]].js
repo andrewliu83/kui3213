@@ -58,6 +58,148 @@ async function readJsonBody(request, maxBytes) {
 
 function validIp(value) { return typeof value === 'string' && /^[0-9A-Fa-f:.]{2,64}$/.test(value); }
 
+// Fleet list reads use opaque cursors so inserts and deletes do not make an
+// offset page drift. Cursor contents are still validated against its filters.
+const FLEET_DEFAULT_LIMIT = 50;
+const FLEET_MAX_LIMIT = 100;
+const FLEET_MAX_CURSOR_LENGTH = 768;
+const FLEET_MAX_METRIC_IDS = 100;
+const FLEET_SERVER_STATUSES = new Set(['all', 'online', 'stale', 'offline']);
+const FLEET_EGRESS_MODES = new Set(['all', 'native', 'residential', 'warp_ipv4', 'warp_ipv6', 'warp_dual', 'socks5']);
+const FLEET_NODE_STATES = new Set(['all', 'active', 'disabled', 'over_quota', 'expired']);
+
+function parseFleetPageLimit(searchParams) {
+    const raw = searchParams.get('limit');
+    if (raw === null) return FLEET_DEFAULT_LIMIT;
+    if (!/^\d+$/.test(raw)) throw new Error(`limit must be an integer between 1 and ${FLEET_MAX_LIMIT}`);
+    const limit = Number(raw);
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > FLEET_MAX_LIMIT) throw new Error(`limit must be an integer between 1 and ${FLEET_MAX_LIMIT}`);
+    return limit;
+}
+
+function parseFleetEnum(searchParams, key, values, defaultValue) {
+    const raw = searchParams.get(key);
+    if (raw === null || raw === '') return defaultValue;
+    if (!values.has(raw)) throw new Error(`Invalid ${key}`);
+    return raw;
+}
+
+function parseFleetQuery(searchParams) {
+    const query = String(searchParams.get('q') || '').trim();
+    if (query.length > 100) throw new Error('q must be at most 100 characters');
+    return query;
+}
+
+function parseFleetOptionalIp(searchParams, key) {
+    const raw = searchParams.get(key);
+    if (raw === null) return null;
+    if (!validIp(raw)) throw new Error(`Invalid ${key}`);
+    return raw;
+}
+
+function parseFleetOptionalToken(searchParams, key, pattern, maxLength) {
+    const raw = searchParams.get(key);
+    if (raw === null) return null;
+    if (!raw || raw.length > maxLength || !pattern.test(raw)) throw new Error(`Invalid ${key}`);
+    return raw;
+}
+
+function parseFleetEnable(searchParams) {
+    const raw = searchParams.get('enable');
+    if (raw === null) return null;
+    if (raw !== '0' && raw !== '1') throw new Error('enable must be 0 or 1');
+    return Number(raw);
+}
+
+function parseFleetMetricIds(searchParams) {
+    const rawValues = searchParams.getAll('ids');
+    if (!rawValues.length) return null;
+    const ids = [];
+    const seen = new Set();
+    for (const rawValue of rawValues) {
+        for (const rawId of rawValue.split(',')) {
+            const id = rawId.trim();
+            if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) throw new Error('Invalid ids');
+            if (!seen.has(id)) { seen.add(id); ids.push(id); }
+        }
+    }
+    if (!ids.length || ids.length > FLEET_MAX_METRIC_IDS) throw new Error(`ids must contain between 1 and ${FLEET_MAX_METRIC_IDS} node IDs`);
+    return ids;
+}
+
+function fleetFilterKey(type, values) { return JSON.stringify([type, ...values]); }
+
+function encodeFleetCursor(type, filterKey, position) {
+    const json = JSON.stringify({ v: 1, t: type, f: filterKey, p: position });
+    return base64Bytes(new TextEncoder().encode(json)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function decodeFleetCursor(raw, type, filterKey) {
+    if (raw === null) return null;
+    if (!raw || raw.length > FLEET_MAX_CURSOR_LENGTH || !/^[A-Za-z0-9_-]+$/.test(raw)) throw new Error('Invalid cursor');
+    try {
+        const base64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+        const parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(decodeBase64Bytes(padded)));
+        if (!parsed || parsed.v !== 1 || parsed.t !== type || parsed.f !== filterKey || !parsed.p || typeof parsed.p !== 'object' || Array.isArray(parsed.p)) throw new Error('Invalid cursor');
+        return parsed.p;
+    } catch (error) {
+        throw new Error('Invalid cursor');
+    }
+}
+
+function escapeFleetLike(value) { return value.replace(/[!%_]/g, '!$&'); }
+
+function fleetNodeState(node, nowMs) {
+    if (Number(node.enable) !== 1) return 'disabled';
+    if (Number(node.expire_time || 0) > 0 && Number(node.expire_time) <= nowMs) return 'expired';
+    if (Number(node.traffic_limit || 0) > 0 && Number(node.traffic_used || 0) >= Number(node.traffic_limit)) return 'over_quota';
+    return 'active';
+}
+
+function fleetServerStatus(lastReport, nowMs, staleAfterMs, offlineAfterMs) {
+    const reportedAt = Number(lastReport || 0);
+    if (reportedAt > nowMs - staleAfterMs) return 'online';
+    if (reportedAt > nowMs - offlineAfterMs) return 'stale';
+    return 'offline';
+}
+
+function fleetServerStatusThresholds(realtimeUrl) {
+    const offlineAfterMs = realtimeUrl ? 1200000 : 360000;
+    // DashboardHub labels real-time snapshots online for six minutes, then
+    // stale until the twenty-minute offline boundary. Keep fleet list filters
+    // on the same definition when that channel is configured.
+    return { offlineAfterMs, staleAfterMs: realtimeUrl ? 360000 : 180000 };
+}
+
+async function loadFleetMeta(db, env) {
+    const { results } = await db.prepare("SELECT key, val FROM sys_config WHERE key IN ('site_title', 'realtime_url')").all();
+    const values = Object.fromEntries((results || []).map(row => [row.key, row.val]));
+    return {
+        site_title: values.site_title || 'Cluster Gateway',
+        realtime_url: env.REALTIME_URL || values.realtime_url || '',
+    };
+}
+
+async function loadSessionMeta(db, env, isAdmin, currentUser) {
+    const meta = await loadFleetMeta(db, env);
+    let mySubToken = '';
+    if (isAdmin) {
+        const existing = await db.prepare("SELECT val FROM sys_config WHERE key = 'admin_sub_token'").first();
+        if (existing?.val) mySubToken = existing.val;
+        else {
+            const candidate = crypto.randomUUID();
+            await db.prepare("INSERT OR IGNORE INTO sys_config (key, val, ts) VALUES ('admin_sub_token', ?, ?)").bind(candidate, Date.now()).run();
+            const stored = await db.prepare("SELECT val FROM sys_config WHERE key = 'admin_sub_token'").first();
+            mySubToken = stored?.val || candidate;
+        }
+    } else {
+        const user = await db.prepare('SELECT sub_token FROM users WHERE username = ?').bind(currentUser).first();
+        mySubToken = user?.sub_token || '';
+    }
+    return { ...meta, my_sub_token: mySubToken };
+}
+
 function validateTrafficReport(data) {
     if (!validIp(data.ip) || typeof data.report_id !== 'string' || data.report_id.length > 160 || !data.report_id.startsWith(`${data.ip}:`)) throw new Error('Invalid report identity');
     const entries = data.node_traffic === undefined ? [] : data.node_traffic;
@@ -787,11 +929,13 @@ async function initializeDbSchema(db) {
         `CREATE TABLE IF NOT EXISTS nodes (id TEXT PRIMARY KEY, uuid TEXT NOT NULL, vps_ip TEXT NOT NULL, protocol TEXT NOT NULL, port INTEGER NOT NULL, sni TEXT, private_key TEXT, public_key TEXT, short_id TEXT, relay_type TEXT, target_ip TEXT, target_port INTEGER, target_id TEXT, enable INTEGER DEFAULT 1, traffic_used INTEGER DEFAULT 0, traffic_limit INTEGER DEFAULT 0, expire_time INTEGER DEFAULT 0, username TEXT DEFAULT 'admin', network TEXT DEFAULT 'tcp', FOREIGN KEY(vps_ip) REFERENCES servers(ip) ON DELETE CASCADE)`,
         `CREATE TABLE IF NOT EXISTS traffic_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT NOT NULL, delta_bytes INTEGER DEFAULT 0, timestamp INTEGER NOT NULL, FOREIGN KEY(ip) REFERENCES servers(ip) ON DELETE CASCADE)`,
         `CREATE INDEX IF NOT EXISTS idx_traffic_ip_time ON traffic_stats(ip, timestamp)`,
+        `CREATE INDEX IF NOT EXISTS idx_nodes_vps_port_id ON nodes(vps_ip, port, id)`,
         `CREATE TABLE IF NOT EXISTS sys_config (key TEXT PRIMARY KEY, val TEXT, ts INTEGER)`,
         `CREATE TABLE IF NOT EXISTS proxy_ctrl_servers (ip TEXT PRIMARY KEY, details TEXT, last_seen INTEGER)`,
         `CREATE TABLE IF NOT EXISTS server_logs (ip TEXT PRIMARY KEY, logs TEXT, updated_at INTEGER)`,
         `CREATE TABLE IF NOT EXISTS proxy_slot_map (key TEXT PRIMARY KEY, value TEXT)`,
         `CREATE TABLE IF NOT EXISTS report_receipts (report_id TEXT PRIMARY KEY, vps_ip TEXT NOT NULL, created_at INTEGER NOT NULL, applied INTEGER DEFAULT 1)`,
+        `CREATE INDEX IF NOT EXISTS idx_report_receipts_created_at ON report_receipts(created_at)`,
         `CREATE TABLE IF NOT EXISTS auth_replays (nonce TEXT PRIMARY KEY, username TEXT NOT NULL, expires_at INTEGER NOT NULL)`,
         `CREATE TABLE IF NOT EXISTS login_throttles (key TEXT PRIMARY KEY, failures INTEGER NOT NULL, window_started_at INTEGER NOT NULL, blocked_until INTEGER NOT NULL DEFAULT 0)`,
         `CREATE TABLE IF NOT EXISTS auth_sessions (token_hash TEXT PRIMARY KEY, username TEXT NOT NULL, expires_at INTEGER NOT NULL)`
@@ -1870,6 +2014,10 @@ ${clashRulesBlock}
     if (!currentUser) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
+        if (action === 'session' && method === 'GET' && params.path.length === 1) {
+            return Response.json(await loadSessionMeta(db, env, isAdmin, currentUser), { headers: { 'Cache-Control': 'no-store' } });
+        }
+
         if (action === "data") {
             const servers = isAdmin
                 ? (await db.prepare("SELECT * FROM servers").all()).results
@@ -1959,6 +2107,177 @@ ${clashRulesBlock}
         if (action === "user" && params.path[1] === "password" && method === "PUT") { const { password } = await readJsonBody(request, 8 * 1024); if (isAdmin) return Response.json({error: "管理员密码受绝对安全保护，仅可通过 Cloudflare Pages 环境变量修改！"}, {status: 400}); if (String(password || '').length < 12) return Response.json({ error: 'Password must be at least 12 characters' }, { status: 400 }); await db.prepare("UPDATE users SET password = ? WHERE username = ?").bind(await passwordHash(password), currentUser).run(); return Response.json({ success: true }); }
         if (action === "user" && params.path[1] === "sub_token" && method === "PUT") { const newToken = crypto.randomUUID(); if (isAdmin) await db.prepare("INSERT OR REPLACE INTO sys_config (key, val, ts) VALUES ('admin_sub_token', ?, ?)").bind(newToken, Date.now()).run(); else await db.prepare("UPDATE users SET sub_token = ? WHERE username = ?").bind(newToken, currentUser).run(); return Response.json({ success: true, token: newToken }); }
         if (action === "stats" && method === "GET" && isAdmin) { const query = `SELECT strftime('%m-%d', datetime(timestamp / 1000, 'unixepoch', 'localtime')) as day, SUM(delta_bytes) as total_bytes FROM traffic_stats WHERE ip = ? AND timestamp > ? GROUP BY day ORDER BY day ASC`; const { results } = await db.prepare(query).bind(new URL(request.url).searchParams.get("ip"), Date.now() - 604800000).all(); return Response.json(results || []); }
+
+        if (action === 'servers' && method === 'GET') {
+            if (!isAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 });
+            await ensureDbSchema(db);
+            const requestUrl = new URL(request.url);
+            const path = params.path || [];
+
+            if (path.length === 2 && path[1] === 'ips') {
+                const { results } = await db.prepare('SELECT ip FROM servers ORDER BY ip ASC LIMIT 100').all();
+                return Response.json({ ips: (results || []).map(server => server.ip) });
+            }
+
+            if (path.length === 2) {
+                let ip;
+                try { ip = decodeURIComponent(path[1]); } catch { return Response.json({ error: 'Invalid server IP' }, { status: 400 }); }
+                if (!validIp(ip)) return Response.json({ error: 'Invalid server IP' }, { status: 400 });
+
+                const server = await db.prepare(`
+                    SELECT ip, name, cpu, mem, disk, load, uptime, last_report, net_in_speed, net_out_speed, tcp_conn, udp_conn,
+                        agent_token, socks5_enable, socks5_addr, socks5_port, socks5_user, socks5_pass, socks5_mode, socks5_domains,
+                        warp_mode, warp_applied_mode, warp_revision, warp_applied_revision, warp_status, warp_error, warp_applied_at,
+                        egress_pending, egress_mode, egress_applied_mode, egress_revision, egress_applied_revision, egress_status,
+                        egress_error, egress_applied_at, proxy_mode, proxy_categories, egress_ip
+                    FROM servers WHERE ip = ?
+                `).bind(ip).first();
+                if (!server) return Response.json({ error: 'VPS not found' }, { status: 404 });
+                if (!server.agent_token) {
+                    const minted = await db.prepare(`
+                        UPDATE servers
+                        SET agent_token = CASE WHEN agent_token IS NULL OR agent_token = '' THEN ? ELSE agent_token END
+                        WHERE ip = ?
+                        RETURNING agent_token
+                    `).bind(crypto.randomUUID(), ip).first();
+                    if (!minted?.agent_token) return Response.json({ error: 'VPS not found' }, { status: 404 });
+                    server.agent_token = minted.agent_token;
+                }
+
+                const nowMs = Date.now();
+                const nodeSummary = await db.prepare(`
+                    SELECT
+                        COUNT(*) AS node_count,
+                        COALESCE(SUM(CASE WHEN enable = 1 THEN 1 ELSE 0 END), 0) AS enabled_node_count,
+                        COALESCE(SUM(CASE WHEN enable = 0 THEN 1 ELSE 0 END), 0) AS disabled_node_count,
+                        COALESCE(SUM(traffic_used), 0) AS traffic_used,
+                        COALESCE(SUM(CASE WHEN enable = 1 AND (traffic_limit = 0 OR traffic_used < traffic_limit) AND (expire_time = 0 OR expire_time > ?) THEN 1 ELSE 0 END), 0) AS active_node_count,
+                        COALESCE(SUM(CASE WHEN traffic_limit > 0 AND traffic_used >= traffic_limit THEN 1 ELSE 0 END), 0) AS over_quota_node_count,
+                        COALESCE(SUM(CASE WHEN expire_time > 0 AND expire_time <= ? THEN 1 ELSE 0 END), 0) AS expired_node_count
+                    FROM nodes WHERE vps_ip = ?
+                `).bind(nowMs, nowMs, ip).first();
+                const adminUsername = env.ADMIN_USERNAME || 'admin';
+                const { results: users } = await db.prepare(`
+                    SELECT username, enable, traffic_limit, traffic_used, expire_time
+                    FROM (
+                        SELECT username, enable, traffic_limit, traffic_used, expire_time FROM users
+                        UNION ALL
+                        SELECT ? AS username, 1 AS enable, 0 AS traffic_limit, 0 AS traffic_used, 0 AS expire_time
+                        WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = ?)
+                    )
+                    ORDER BY username COLLATE NOCASE ASC
+                `).bind(adminUsername, adminUsername).all();
+                return Response.json({
+                    server,
+                    users: users || [],
+                    node_summary: {
+                        node_count: Number(nodeSummary?.node_count || 0),
+                        enabled_node_count: Number(nodeSummary?.enabled_node_count || 0),
+                        disabled_node_count: Number(nodeSummary?.disabled_node_count || 0),
+                        traffic_used: Number(nodeSummary?.traffic_used || 0),
+                        active_node_count: Number(nodeSummary?.active_node_count || 0),
+                        over_quota_node_count: Number(nodeSummary?.over_quota_node_count || 0),
+                        expired_node_count: Number(nodeSummary?.expired_node_count || 0),
+                    },
+                }, { headers: { 'Cache-Control': 'no-store' } });
+            }
+            if (path.length !== 1) return Response.json({ error: 'Not found' }, { status: 404 });
+
+            let limit, query, status, egress, cursor;
+            try {
+                limit = parseFleetPageLimit(requestUrl.searchParams);
+                query = parseFleetQuery(requestUrl.searchParams);
+                status = parseFleetEnum(requestUrl.searchParams, 'status', FLEET_SERVER_STATUSES, 'all');
+                egress = parseFleetEnum(requestUrl.searchParams, 'egress', FLEET_EGRESS_MODES, 'all');
+                const filterKey = fleetFilterKey('servers', [query, status, egress]);
+                cursor = decodeFleetCursor(requestUrl.searchParams.get('cursor'), 'servers', filterKey);
+                if (cursor && !validIp(cursor.ip)) throw new Error('Invalid cursor');
+            } catch (error) {
+                return Response.json({ error: error.message || 'Invalid server list query' }, { status: 400 });
+            }
+
+            const meta = await loadFleetMeta(db, env);
+            const nowMs = Date.now();
+            const thresholds = fleetServerStatusThresholds(meta.realtime_url);
+            const where = ['1 = 1'];
+            const bindings = [nowMs, nowMs];
+            if (query) {
+                const like = `%${escapeFleetLike(query)}%`;
+                where.push("(s.ip LIKE ? ESCAPE '!' OR lower(s.name) LIKE lower(?) ESCAPE '!')");
+                bindings.push(like, like);
+            }
+            if (status === 'online') {
+                where.push('s.last_report > ?');
+                bindings.push(nowMs - thresholds.staleAfterMs);
+            } else if (status === 'stale') {
+                where.push('s.last_report > ? AND s.last_report <= ?');
+                bindings.push(nowMs - thresholds.offlineAfterMs, nowMs - thresholds.staleAfterMs);
+            } else if (status === 'offline') {
+                where.push('s.last_report <= ?');
+                bindings.push(nowMs - thresholds.offlineAfterMs);
+            }
+            if (egress !== 'all') {
+                where.push("COALESCE(s.egress_mode, 'native') = ?");
+                bindings.push(egress);
+            }
+            if (cursor) {
+                where.push('s.ip > ?');
+                bindings.push(cursor.ip);
+            }
+            const serverRows = await db.prepare(`
+                SELECT
+                    s.ip, s.name, s.cpu, s.mem, s.disk, s.load, s.uptime, s.last_report,
+                    s.net_in_speed, s.net_out_speed, s.tcp_conn, s.udp_conn,
+                    s.egress_mode, s.egress_applied_mode, s.egress_status, s.egress_ip,
+                    COUNT(n.id) AS node_count,
+                    COALESCE(SUM(CASE WHEN n.id IS NOT NULL AND n.enable = 1 THEN 1 ELSE 0 END), 0) AS enabled_node_count,
+                    COALESCE(SUM(CASE WHEN n.id IS NOT NULL AND n.enable = 0 THEN 1 ELSE 0 END), 0) AS disabled_node_count,
+                    COALESCE(SUM(CASE WHEN n.id IS NOT NULL AND n.enable = 1 AND (n.traffic_limit = 0 OR n.traffic_used < n.traffic_limit) AND (n.expire_time = 0 OR n.expire_time > ?) THEN 1 ELSE 0 END), 0) AS active_node_count,
+                    COALESCE(SUM(CASE WHEN n.id IS NOT NULL AND n.traffic_limit > 0 AND n.traffic_used >= n.traffic_limit THEN 1 ELSE 0 END), 0) AS over_quota_node_count,
+                    COALESCE(SUM(CASE WHEN n.id IS NOT NULL AND n.expire_time > 0 AND n.expire_time <= ? THEN 1 ELSE 0 END), 0) AS expired_node_count
+                FROM servers AS s
+                LEFT JOIN nodes AS n ON n.vps_ip = s.ip
+                WHERE ${where.join(' AND ')}
+                GROUP BY s.ip
+                ORDER BY s.ip ASC
+                LIMIT ?
+            `).bind(...bindings, limit + 1).all();
+            const rows = serverRows.results || [];
+            const hasMore = rows.length > limit;
+            const page = rows.slice(0, limit);
+            const filterKey = fleetFilterKey('servers', [query, status, egress]);
+            const last = page[page.length - 1];
+            return Response.json({
+                servers: page.map(row => ({
+                    ip: row.ip,
+                    name: row.name,
+                    status: fleetServerStatus(row.last_report, nowMs, thresholds.staleAfterMs, thresholds.offlineAfterMs),
+                    cpu: Number(row.cpu || 0),
+                    mem: Number(row.mem || 0),
+                    disk: Number(row.disk || 0),
+                    load: row.load || '',
+                    uptime: row.uptime || '',
+                    last_report: Number(row.last_report || 0),
+                    net_in_speed: Number(row.net_in_speed || 0),
+                    net_out_speed: Number(row.net_out_speed || 0),
+                    tcp_conn: Number(row.tcp_conn || 0),
+                    udp_conn: Number(row.udp_conn || 0),
+                    egress_mode: row.egress_mode || 'native',
+                    egress_applied_mode: row.egress_applied_mode || 'native',
+                    egress_status: row.egress_status || 'applied',
+                    egress_ip: row.egress_ip || '',
+                    node_count: Number(row.node_count || 0),
+                    enabled_node_count: Number(row.enabled_node_count || 0),
+                    disabled_node_count: Number(row.disabled_node_count || 0),
+                    active_node_count: Number(row.active_node_count || 0),
+                    over_quota_node_count: Number(row.over_quota_node_count || 0),
+                    expired_node_count: Number(row.expired_node_count || 0),
+                })),
+                meta,
+                has_more: hasMore,
+                next_cursor: hasMore && last ? encodeFleetCursor('servers', filterKey, { ip: last.ip }) : null,
+            });
+        }
         
         if (action === "users" && isAdmin) {
             if (method === "POST") { const { username, password, traffic_limit, expire_time } = await readJsonBody(request, 16 * 1024); const safeUser = String(username || '').trim(); if (!/^[A-Za-z0-9_.-]{1,64}$/.test(safeUser) || safeUser === (env.ADMIN_USERNAME || 'admin')) return Response.json({ error: 'Invalid or reserved username' }, { status: 400 }); if (String(password || '').length < 12) return Response.json({ error: 'Password must be at least 12 characters' }, { status: 400 }); if (await db.prepare("SELECT username FROM users WHERE username = ?").bind(safeUser).first()) return Response.json({ error: "User already exists" }, { status: 409 }); const hash = await passwordHash(password); const subToken = crypto.randomUUID(); await db.prepare("INSERT INTO users (username, password, traffic_limit, expire_time, sub_token) VALUES (?, ?, ?, ?, ?)").bind(safeUser, hash, Math.max(0, Number(traffic_limit)||0), Math.max(0, Number(expire_time)||0), subToken).run(); return Response.json({ success: true }); }
@@ -1975,6 +2294,117 @@ ${clashRulesBlock}
                 await db.batch([ db.prepare("DELETE FROM nodes WHERE vps_ip = ?").bind(ip), db.prepare("DELETE FROM traffic_stats WHERE ip = ?").bind(ip), db.prepare("DELETE FROM servers WHERE ip = ?").bind(ip), db.prepare("DELETE FROM probe_servers WHERE id = ?").bind(ip), db.prepare("DELETE FROM proxy_ctrl_servers WHERE ip = ?").bind(ip), db.prepare("DELETE FROM server_logs WHERE ip = ?").bind(ip), db.prepare("DELETE FROM probe_settings WHERE key = ?").bind(`proxy_slot_map_${ip}`) ]);
                 return Response.json({ success: true }); 
             }
+        }
+
+        if (action === 'nodes' && method === 'GET') {
+            if (!isAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 });
+            await ensureDbSchema(db);
+            const requestUrl = new URL(request.url);
+            const searchParams = requestUrl.searchParams;
+            let metricIds;
+            try { metricIds = parseFleetMetricIds(searchParams); } catch (error) { return Response.json({ error: error.message || 'Invalid node metric query' }, { status: 400 }); }
+
+            if (metricIds) {
+                const incompatible = ['limit', 'cursor', 'q', 'vps_ip', 'protocol', 'username', 'enable', 'state'];
+                if (incompatible.some(key => searchParams.has(key))) return Response.json({ error: 'ids cannot be combined with pagination or filters' }, { status: 400 });
+                const placeholders = metricIds.map(() => '?').join(', ');
+                const { results } = await db.prepare(`
+                    SELECT id, vps_ip, enable, traffic_used, traffic_limit, expire_time
+                    FROM nodes
+                    WHERE id IN (${placeholders})
+                    ORDER BY id ASC
+                `).bind(...metricIds).all();
+                const nowMs = Date.now();
+                return Response.json({
+                    nodes: (results || []).map(node => ({
+                        id: node.id,
+                        vps_ip: node.vps_ip,
+                        enable: Number(node.enable || 0),
+                        traffic_used: Number(node.traffic_used || 0),
+                        traffic_limit: Number(node.traffic_limit || 0),
+                        expire_time: Number(node.expire_time || 0),
+                        state: fleetNodeState(node, nowMs),
+                    })),
+                    updated_at: nowMs,
+                });
+            }
+
+            let limit, query, vpsIp, protocol, username, enable, state, cursor, filterKey;
+            try {
+                limit = parseFleetPageLimit(searchParams);
+                query = parseFleetQuery(searchParams);
+                vpsIp = parseFleetOptionalIp(searchParams, 'vps_ip');
+                protocol = parseFleetOptionalToken(searchParams, 'protocol', /^[A-Za-z0-9_-]+$/, 64);
+                username = parseFleetOptionalToken(searchParams, 'username', /^[A-Za-z0-9_.-]+$/, 64);
+                enable = parseFleetEnable(searchParams);
+                state = parseFleetEnum(searchParams, 'state', FLEET_NODE_STATES, 'all');
+                filterKey = fleetFilterKey('nodes', [query, vpsIp || '', protocol || '', username || '', enable === null ? '' : enable, state]);
+                cursor = decodeFleetCursor(searchParams.get('cursor'), 'nodes', filterKey);
+                if (cursor && (!validIp(cursor.vps_ip) || !Number.isInteger(cursor.port) || cursor.port < 1 || cursor.port > 65535 || !/^[A-Za-z0-9_-]{1,64}$/.test(cursor.id || ''))) throw new Error('Invalid cursor');
+            } catch (error) {
+                return Response.json({ error: error.message || 'Invalid node list query' }, { status: 400 });
+            }
+
+            const nowMs = Date.now();
+            const where = ['1 = 1'];
+            const bindings = [];
+            if (query) {
+                const like = `%${escapeFleetLike(query)}%`;
+                where.push("(n.id LIKE ? ESCAPE '!' OR n.vps_ip LIKE ? ESCAPE '!' OR lower(n.protocol) LIKE lower(?) ESCAPE '!' OR lower(n.username) LIKE lower(?) ESCAPE '!' OR CAST(n.port AS TEXT) LIKE ? ESCAPE '!')");
+                bindings.push(like, like, like, like, like);
+            }
+            if (vpsIp) { where.push('n.vps_ip = ?'); bindings.push(vpsIp); }
+            if (protocol) { where.push('n.protocol = ?'); bindings.push(protocol); }
+            if (username) { where.push('n.username = ?'); bindings.push(username); }
+            if (enable !== null) { where.push('n.enable = ?'); bindings.push(enable); }
+            if (state === 'active') {
+                where.push('n.enable = 1 AND (n.traffic_limit = 0 OR n.traffic_used < n.traffic_limit) AND (n.expire_time = 0 OR n.expire_time > ?)');
+                bindings.push(nowMs);
+            } else if (state === 'disabled') {
+                where.push('n.enable = 0');
+            } else if (state === 'over_quota') {
+                where.push('n.enable = 1 AND (n.expire_time = 0 OR n.expire_time > ?) AND n.traffic_limit > 0 AND n.traffic_used >= n.traffic_limit');
+                bindings.push(nowMs);
+            } else if (state === 'expired') {
+                where.push('n.enable = 1 AND n.expire_time > 0 AND n.expire_time <= ?');
+                bindings.push(nowMs);
+            }
+            if (cursor) {
+                where.push('(n.vps_ip > ? OR (n.vps_ip = ? AND n.port > ?) OR (n.vps_ip = ? AND n.port = ? AND n.id > ?))');
+                bindings.push(cursor.vps_ip, cursor.vps_ip, cursor.port, cursor.vps_ip, cursor.port, cursor.id);
+            }
+            const nodeRows = await db.prepare(`
+                SELECT n.id, n.vps_ip, s.name AS server_name, n.protocol, n.port, n.username, n.network, n.relay_type,
+                    n.enable, n.traffic_used, n.traffic_limit, n.expire_time
+                FROM nodes AS n
+                LEFT JOIN servers AS s ON s.ip = n.vps_ip
+                WHERE ${where.join(' AND ')}
+                ORDER BY n.vps_ip ASC, n.port ASC, n.id ASC
+                LIMIT ?
+            `).bind(...bindings, limit + 1).all();
+            const rows = nodeRows.results || [];
+            const hasMore = rows.length > limit;
+            const page = rows.slice(0, limit);
+            const last = page[page.length - 1];
+            return Response.json({
+                nodes: page.map(node => ({
+                    id: node.id,
+                    vps_ip: node.vps_ip,
+                    server_name: node.server_name || node.vps_ip,
+                    protocol: node.protocol,
+                    port: Number(node.port || 0),
+                    username: node.username || '',
+                    network: node.network || 'tcp',
+                    relay_type: node.relay_type || '',
+                    enable: Number(node.enable || 0),
+                    traffic_used: Number(node.traffic_used || 0),
+                    traffic_limit: Number(node.traffic_limit || 0),
+                    expire_time: Number(node.expire_time || 0),
+                    state: fleetNodeState(node, nowMs),
+                })),
+                has_more: hasMore,
+                next_cursor: hasMore && last ? encodeFleetCursor('nodes', filterKey, { vps_ip: last.vps_ip, port: Number(last.port), id: last.id }) : null,
+            });
         }
 
         if (action === "nodes" && isAdmin) {
