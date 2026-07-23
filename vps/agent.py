@@ -32,11 +32,12 @@ if sys.stdout.encoding != 'UTF-8':
     try: sys.stdout.reconfigure(encoding='utf-8')
     except Exception: pass
 
-CONF_FILE = "/opt/kui/config.json"
+CONF_FILE = os.environ.get("KUI_AGENT_CONFIG_FILE", "/opt/kui/config.json")
 SINGBOX_CONF_PATH = "/etc/sing-box/config.json"
 WARP_CONF_PATH = "/opt/kui/warp.json"
 WARP_STATE_PATH = "/opt/kui/egress-state.json"
-TRAFFIC_STATE_PATH = "/opt/kui/traffic-state.json"
+TRAFFIC_STATE_PATH = os.environ.get("KUI_TRAFFIC_STATE_PATH", "/opt/kui/traffic-state.json")
+MAX_TRAFFIC_ENTRIES_PER_REPORT = 200
 WGCF_VERSION = "2.2.31"
 WGCF_ASSETS = {
     "x86_64": ("amd64", "69147e1a517c66129edd8ac8cb60484d6c9515178d7b4a2f95e3c925f225572a"),
@@ -138,6 +139,112 @@ def _load_traffic_state():
         return state if isinstance(state, dict) else {}
     except Exception:
         return {}
+
+def _copy_report_bytes(value):
+    if not isinstance(value, dict):
+        return {}
+    copied = {}
+    for node_id, raw_bytes in value.items():
+        try:
+            bytes_used = int(raw_bytes)
+        except (TypeError, ValueError):
+            continue
+        if bytes_used >= 0:
+            copied[str(node_id)] = bytes_used
+    return copied
+
+def _batch_report_id(group_report_id, index):
+    group_report_id = str(group_report_id or "")
+    candidate = f"{group_report_id}:{index}"
+    if group_report_id.startswith(f"{VPS_IP}:") and len(candidate) <= 160:
+        return candidate
+    return f"{VPS_IP}:{time.time_ns()}:{index}"
+
+def _build_report_batches(group_report_id, report_bytes, node_traffic, status=None, payload_template=None, preserve_single_id=False):
+    entries = list(node_traffic or [])
+    chunks = [entries[index:index + MAX_TRAFFIC_ENTRIES_PER_REPORT] for index in range(0, len(entries), MAX_TRAFFIC_ENTRIES_PER_REPORT)] or [[]]
+    traffic_ids = {str(entry["id"]) for entry in entries if isinstance(entry, dict) and "id" in entry}
+    baseline_only = {node_id: value for node_id, value in report_bytes.items() if node_id not in traffic_ids}
+    template = payload_template if isinstance(payload_template, dict) else status if isinstance(status, dict) else None
+    batches = []
+
+    for index, chunk in enumerate(chunks):
+        report_id = str(group_report_id) if preserve_single_id and len(chunks) == 1 and group_report_id else _batch_report_id(group_report_id, index)
+        batch_bytes = dict(baseline_only) if index == 0 else {}
+        for entry in chunk:
+            if isinstance(entry, dict) and "id" in entry:
+                node_id = str(entry["id"])
+                if node_id in report_bytes:
+                    batch_bytes[node_id] = report_bytes[node_id]
+        payload = None
+        if template is not None:
+            payload = dict(template)
+            payload["report_id"] = report_id
+            payload["node_traffic"] = list(chunk)
+        batches.append({
+            "report_id": report_id,
+            "report_bytes": batch_bytes,
+            "node_traffic": list(chunk),
+            "payload": payload,
+        })
+    return batches
+
+def _restore_pending_batches(pending, report_bytes, node_traffic):
+    raw_batches = pending.get("batches") if isinstance(pending, dict) else None
+    if isinstance(raw_batches, list) and raw_batches:
+        batches = []
+        for raw_batch in raw_batches:
+            if not isinstance(raw_batch, dict) or not raw_batch.get("report_id"):
+                continue
+            batches.append({
+                "report_id": str(raw_batch["report_id"]),
+                "report_bytes": _copy_report_bytes(raw_batch.get("report_bytes")),
+                "node_traffic": list(raw_batch.get("node_traffic") or []),
+                "payload": dict(raw_batch["payload"]) if isinstance(raw_batch.get("payload"), dict) else None,
+            })
+        if batches:
+            return batches
+
+    if not isinstance(pending, dict) or not pending.get("report_id"):
+        return []
+    # Legacy state had one payload. Reports over the API's entry limit were
+    # rejected before a receipt was written, so it is safe to split them now.
+    return _build_report_batches(
+        pending["report_id"],
+        report_bytes,
+        node_traffic,
+        payload_template=pending.get("payload"),
+        preserve_single_id=len(node_traffic or []) <= MAX_TRAFFIC_ENTRIES_PER_REPORT,
+    )
+
+def _restore_pending_status_report(pending, report_bytes, node_traffic):
+    if not isinstance(pending, dict):
+        return None
+    if pending.get("status_only") and pending.get("report_id"):
+        return {
+            "report_id": str(pending["report_id"]),
+            "report_bytes": dict(report_bytes),
+            "payload": dict(pending["payload"]) if isinstance(pending.get("payload"), dict) else None,
+        }
+
+    raw_batches = pending.get("batches")
+    if isinstance(raw_batches, list) and raw_batches and all(isinstance(batch, dict) and not batch.get("node_traffic") for batch in raw_batches):
+        batch = raw_batches[0]
+        report_id = batch.get("report_id") or pending.get("report_id")
+        if report_id:
+            return {
+                "report_id": str(report_id),
+                "report_bytes": dict(report_bytes) if report_bytes else _copy_report_bytes(batch.get("report_bytes")),
+                "payload": dict(batch["payload"]) if isinstance(batch.get("payload"), dict) else None,
+            }
+
+    if not raw_batches and isinstance(node_traffic, list) and not node_traffic and pending.get("report_id"):
+        return {
+            "report_id": str(pending["report_id"]),
+            "report_bytes": dict(report_bytes),
+            "payload": dict(pending["payload"]) if isinstance(pending.get("payload"), dict) else None,
+        }
+    return None
 
 def _ensure_wgcf():
     machine = platform.machine().lower()
@@ -408,14 +515,40 @@ dynamic_ping = {"ct": None, "cu": None, "cm": None}
 pending_report_id = None
 pending_report_bytes = None
 pending_node_traffic = None
-pending_report_payload = None
+pending_report_batches = []
+pending_status_report = None
+pending_http_started = False
 _traffic_state = _load_traffic_state()
-last_reported_bytes = {str(k): int(v) for k, v in (_traffic_state.get("last_reported_bytes") or {}).items()}
+last_reported_bytes = _copy_report_bytes(_traffic_state.get("last_reported_bytes"))
 _pending = _traffic_state.get("pending") or {}
-pending_report_id = _pending.get("report_id")
-pending_report_bytes = _pending.get("report_bytes")
-pending_node_traffic = _pending.get("node_traffic")
-pending_report_payload = _pending.get("payload")
+if isinstance(_pending, dict):
+    raw_report_bytes = _pending.get("report_bytes")
+    pending_report_bytes = _copy_report_bytes(raw_report_bytes) if isinstance(raw_report_bytes, dict) else None
+    raw_node_traffic = _pending.get("node_traffic")
+    pending_node_traffic = list(raw_node_traffic) if isinstance(raw_node_traffic, list) else None
+    pending_status_report = _restore_pending_status_report(_pending, pending_report_bytes or {}, pending_node_traffic)
+    if pending_status_report:
+        pending_report_id = pending_status_report["report_id"]
+        pending_report_bytes = pending_status_report["report_bytes"]
+        pending_node_traffic = []
+        pending_http_started = bool(_pending.get("http_started")) if "http_started" in _pending else isinstance(pending_status_report.get("payload"), dict)
+    else:
+        pending_report_batches = _restore_pending_batches(_pending, pending_report_bytes or {}, pending_node_traffic or [])
+        if pending_report_batches:
+            pending_report_id = str(_pending.get("report_id") or pending_report_batches[0]["report_id"])
+            pending_http_started = bool(_pending.get("http_started")) if "http_started" in _pending else isinstance(pending_report_batches[0].get("payload"), dict)
+            if pending_node_traffic is None:
+                pending_node_traffic = [entry for batch in pending_report_batches for entry in batch["node_traffic"]]
+            if pending_report_bytes is None:
+                pending_report_bytes = dict(last_reported_bytes)
+                for batch in pending_report_batches:
+                    pending_report_bytes.update(batch["report_bytes"])
+        else:
+            pending_report_id = None
+            pending_report_bytes = None
+            pending_node_traffic = None
+            pending_status_report = None
+            pending_http_started = False
 egress_retry_timer = None
 egress_retry_lock = threading.Lock()
 
@@ -1060,70 +1193,175 @@ def build_singbox_config(nodes, proxy_cfg=None, peers=None, mesh=None, socks5_ou
             try: os.remove(os.path.join("/opt/kui/", filename))
             except OSError: pass
 
+def _persist_traffic_report_state():
+    pending = None
+    if pending_report_batches:
+        pending = {
+            "version": 2,
+            "report_id": pending_report_id,
+            "report_bytes": pending_report_bytes,
+            "node_traffic": pending_node_traffic,
+            "http_started": pending_http_started,
+            "batches": pending_report_batches,
+        }
+    elif pending_status_report:
+        pending = {
+            "version": 2,
+            "status_only": True,
+            "report_id": pending_status_report["report_id"],
+            "report_bytes": pending_report_bytes,
+            "node_traffic": [],
+            "payload": pending_status_report["payload"],
+            "http_started": pending_http_started,
+        }
+    _write_json_state(TRAFFIC_STATE_PATH, {"last_reported_bytes": last_reported_bytes, "pending": pending})
+
+def _queue_traffic_report(report_bytes, node_traffic):
+    global pending_report_id, pending_report_bytes, pending_node_traffic, pending_report_batches, pending_status_report, pending_http_started
+    pending_report_id = f"{VPS_IP}:{time.time_ns()}"
+    pending_report_bytes = dict(report_bytes)
+    pending_node_traffic = list(node_traffic)
+    pending_report_batches = _build_report_batches(pending_report_id, pending_report_bytes, pending_node_traffic)
+    pending_status_report = None
+    pending_http_started = False
+
+def _queue_status_report(report_bytes):
+    global pending_report_id, pending_report_bytes, pending_node_traffic, pending_report_batches, pending_status_report, pending_http_started
+    pending_report_id = f"{VPS_IP}:{time.time_ns()}"
+    pending_report_bytes = dict(report_bytes)
+    pending_node_traffic = []
+    pending_report_batches = []
+    pending_status_report = {"report_id": pending_report_id, "report_bytes": pending_report_bytes, "payload": None}
+    pending_http_started = False
+
+def _prepare_pending_report_payload(status):
+    global pending_http_started
+    report = pending_report_batches[0] if pending_report_batches else pending_status_report
+    if not report:
+        raise RuntimeError("no pending report")
+    if not isinstance(report.get("payload"), dict):
+        payload = dict(status)
+        payload["report_id"] = report["report_id"]
+        payload["node_traffic"] = list(report.get("node_traffic") or [])
+        report["payload"] = payload
+    pending_http_started = True
+    # A report becomes immutable at this point. Persist before its first HTTP
+    # request so a timeout or restart reuses this exact ID and payload.
+    _persist_traffic_report_state()
+    return report["payload"]
+
+def _complete_pending_report_batch():
+    global last_reported_bytes, pending_report_id, pending_report_bytes, pending_node_traffic, pending_report_batches, pending_status_report, pending_http_started
+    batch = pending_report_batches.pop(0)
+    # The persistent baseline only moves after the matching report ID has
+    # received a successful HTTP response. A restart can therefore retry an
+    # unacknowledged batch without dropping or double-counting its traffic.
+    last_reported_bytes.update(_copy_report_bytes(batch.get("report_bytes")))
+    if pending_report_batches:
+        _persist_traffic_report_state()
+        return
+    if isinstance(pending_report_bytes, dict):
+        last_reported_bytes = dict(pending_report_bytes)
+    pending_report_id = None
+    pending_report_bytes = None
+    pending_node_traffic = None
+    pending_status_report = None
+    pending_http_started = False
+    _persist_traffic_report_state()
+
+def _complete_pending_status_report():
+    global last_reported_bytes, pending_report_id, pending_report_bytes, pending_node_traffic, pending_report_batches, pending_status_report, pending_http_started
+    if isinstance(pending_report_bytes, dict):
+        last_reported_bytes = dict(pending_report_bytes)
+    pending_report_id = None
+    pending_report_bytes = None
+    pending_node_traffic = None
+    pending_report_batches = []
+    pending_status_report = None
+    pending_http_started = False
+    _persist_traffic_report_state()
+
+def _apply_report_response(resp_data):
+    global global_interval, fast_mode
+    if not isinstance(resp_data, dict):
+        return
+    if "interval" in resp_data:
+        try:
+            global_interval = min(max(1, int(resp_data["interval"])), 3600)
+        except (TypeError, ValueError):
+            pass
+    new_fast_mode = bool(resp_data.get("fast_mode"))
+    if new_fast_mode and not fast_mode:
+        config_wakeup.set()
+    fast_mode = new_fast_mode
+    for key in ("ct", "cu", "cm"):
+        value = resp_data.get(f"ping_{key}")
+        dynamic_ping[key] = None if not value or value == "default" else value
+
 def report_status(current_nodes, argo_urls, force_http=False, allow_http=True):
-    global last_reported_bytes, global_interval, fast_mode, dynamic_ping, pending_report_id, pending_report_bytes, pending_node_traffic, pending_report_payload, last_http_report
+    global last_http_report
     status = get_system_status(global_interval)
     status["ip"] = VPS_IP
     status["argo_urls"] = argo_urls
-    
-    deltas = []
-    pending_bytes = dict(last_reported_bytes)
-    current_ids = set()
-    for node in current_nodes:
-        nid, port = node["id"], node["port"]
-        current_ids.add(nid)
-        proto = "udp" if node["protocol"] in ["Hysteria2", "TUIC"] else "tcp"
-        current_bytes = get_port_traffic(port, proto, nid)
-        if current_bytes is None:
-            continue
-        baseline = pending_bytes.get(nid, current_bytes)
-        delta = current_bytes - baseline if current_bytes >= baseline else current_bytes
-        if delta > 0: deltas.append({ "id": nid, "delta_bytes": delta })
-        pending_bytes[nid] = current_bytes
 
-    if not pending_report_id:
-        pending_report_id = f"{VPS_IP}:{time.time_ns()}"
-    # Keep accumulating against the last successful HTTP baseline. WebSocket
-    # updates are display-only and must not advance billable traffic counters.
-    if pending_report_payload is None:
-        pending_report_bytes = {k: v for k, v in pending_bytes.items() if k in current_ids}
-        pending_node_traffic = deltas
-    status["node_traffic"] = pending_node_traffic
+    if not pending_report_batches and not pending_status_report:
+        deltas = []
+        pending_bytes = dict(last_reported_bytes)
+        current_ids = set()
+        for node in current_nodes:
+            node_id, port = str(node["id"]), node["port"]
+            current_ids.add(node_id)
+            proto = "udp" if node["protocol"] in ["Hysteria2", "TUIC"] else "tcp"
+            current_bytes = get_port_traffic(port, proto, node_id)
+            if current_bytes is None:
+                continue
+            current_bytes = int(current_bytes)
+            baseline = pending_bytes.get(node_id, current_bytes)
+            delta = current_bytes - baseline if current_bytes >= baseline else current_bytes
+            if delta > 0:
+                deltas.append({"id": node_id, "delta_bytes": delta})
+            pending_bytes[node_id] = current_bytes
+
+        # Keep the old behavior for counters that could not be sampled: their
+        # prior baseline remains in the successful snapshot, while removed
+        # nodes are dropped once the pending report succeeds.
+        report_bytes = {node_id: value for node_id, value in pending_bytes.items() if node_id in current_ids}
+        if deltas:
+            _queue_traffic_report(report_bytes, deltas)
+        else:
+            _queue_status_report(report_bytes)
+
+    status["node_traffic"] = list(pending_node_traffic or [])
     status["report_id"] = pending_report_id
-    _write_json_state(TRAFFIC_STATE_PATH, {"last_reported_bytes": last_reported_bytes, "pending": {"report_id": pending_report_id, "report_bytes": pending_report_bytes, "node_traffic": pending_node_traffic, "payload": pending_report_payload}})
+    # Persist the queue before either transport. HTTP payloads stay unset until
+    # the matching batch is actually due, so routine metrics remain fresh.
+    _persist_traffic_report_state()
 
-    websocket_sent = realtime_channel.send(status) if realtime_channel and realtime_channel.connected else False
-    if websocket_sent and not force_http and time.time() - last_http_report < REALTIME_HTTP_INTERVAL:
+    websocket_status = dict(status)
+    # The realtime service does not consume billable traffic entries. Keeping
+    # them off this display-only channel prevents a large queue from exceeding
+    # its message-size budget and hiding otherwise healthy server telemetry.
+    websocket_status.pop("node_traffic", None)
+    websocket_sent = realtime_channel.send(websocket_status) if realtime_channel and realtime_channel.connected else False
+    if websocket_sent and not force_http and not pending_http_started and time.time() - last_http_report < REALTIME_HTTP_INTERVAL:
         return True
     if realtime_channel and realtime_channel.enabled and not websocket_sent and time.time() - realtime_channel.last_disconnected < 30:
         return False
     if not websocket_sent and not allow_http:
         return False
 
-    try: 
-        if pending_report_payload is None:
-            pending_report_payload = dict(status)
-            pending_report_payload["node_traffic"] = list(pending_node_traffic or [])
-            _write_json_state(TRAFFIC_STATE_PATH, {"last_reported_bytes": last_reported_bytes, "pending": {"report_id": pending_report_id, "report_bytes": pending_report_bytes, "node_traffic": pending_node_traffic, "payload": pending_report_payload}})
-        req = urllib.request.Request(REPORT_URL, data=json.dumps(pending_report_payload).encode(), headers=HEADERS)
+    try:
+        is_traffic_batch = bool(pending_report_batches)
+        payload = _prepare_pending_report_payload(status)
+        req = urllib.request.Request(REPORT_URL, data=json.dumps(payload).encode(), headers=HEADERS)
         with urllib.request.urlopen(req, timeout=20) as response:
-            resp_data = json.loads(response.read().decode('utf-8'))
-        last_reported_bytes = pending_report_bytes
-        pending_report_id = None
-        pending_report_bytes = None
-        pending_node_traffic = None
-        pending_report_payload = None
+            resp_data = json.loads(response.read().decode("utf-8"))
+        if is_traffic_batch:
+            _complete_pending_report_batch()
+        else:
+            _complete_pending_status_report()
         last_http_report = time.time()
-        _write_json_state(TRAFFIC_STATE_PATH, {"last_reported_bytes": last_reported_bytes, "pending": None})
-        if resp_data and "interval" in resp_data:
-            global_interval = min(max(1, int(resp_data["interval"])), 3600)
-        new_fast_mode = bool(resp_data.get("fast_mode"))
-        if new_fast_mode and not fast_mode:
-            config_wakeup.set()
-        fast_mode = new_fast_mode
-        for key in ("ct", "cu", "cm"):
-            value = resp_data.get(f"ping_{key}")
-            dynamic_ping[key] = None if not value or value == "default" else value
+        _apply_report_response(resp_data)
         return True
     except Exception as error:
         print(f"[agent] status report failed: {error}", flush=True)
@@ -1371,11 +1609,17 @@ if __name__ == "__main__":
                 print(f"[agent] heartbeat loop error: {error}", flush=True)
             elapsed = time.monotonic() - started
             if realtime_channel and realtime_channel.connected:
-                heartbeat_interval = realtime_status_interval
+                # An idle dashboard normally lowers this to 30 seconds. Keep
+                # a bounded one-batch drain cadence while traffic is queued.
+                heartbeat_interval = REALTIME_STATUS_ACTIVE_INTERVAL if pending_report_batches else realtime_status_interval
             elif realtime_channel and realtime_channel.enabled and not realtime_channel.ever_connected and time.time() - realtime_channel.started_at < 30:
                 heartbeat_interval = max(1, 30 - (time.time() - realtime_channel.started_at))
             elif realtime_channel and realtime_channel.ever_connected and time.time() - realtime_channel.last_disconnected < 30:
                 heartbeat_interval = max(1, 30 - (time.time() - realtime_channel.last_disconnected))
+            elif pending_report_batches:
+                # Normal HTTP fallback sleeps for 90+ seconds. Do not leave
+                # billable traffic frozen that long once fallback is allowed.
+                heartbeat_interval = REALTIME_STATUS_ACTIVE_INTERVAL
             else:
                 heartbeat_interval = min(max(90, global_interval), 300)
             heartbeat_wakeup.wait(timeout=max(1, heartbeat_interval - min(heartbeat_interval - 1, elapsed)))
