@@ -905,6 +905,8 @@ async function parseThirdPartySubscription(content) {
 
 let schemaReadyPromise = null;
 let lastReceiptCleanup = 0;
+// Bump when initializeDbSchema changes so cold paths re-run migrations once.
+const DB_SCHEMA_VERSION = 4;
 
 function loginThrottleKey(request) { return `${request.headers.get('CF-Connecting-IP') || 'unknown'}:${String(request.headers.get('Authorization') || '').split('.')[0].slice(0, 128)}`; }
 
@@ -995,12 +997,16 @@ async function initializeDbSchema(db) {
     try { await db.prepare("SELECT last_report_id FROM probe_servers LIMIT 1").first(); } catch (e) { try { await db.prepare("ALTER TABLE probe_servers ADD COLUMN last_report_id TEXT DEFAULT ''").run(); } catch(err){} }
     try { await db.prepare("SELECT applied FROM report_receipts LIMIT 1").first(); } catch (e) { try { await db.prepare("ALTER TABLE report_receipts ADD COLUMN applied INTEGER DEFAULT 1").run(); } catch(err){} }
 
-    // 初始化云端测速数据
+    // Seed cloud speed-test node pack only when missing. Never block schema on GitHub.
+    // (A hung external fetch previously stalled schemaReadyPromise and every /api/* caller.)
     const checkNodes = await db.prepare("SELECT value FROM probe_settings WHERE key = 'cached_nodes_data'").first();
     if (!checkNodes) {
         try {
-            const res = await fetch('https://raw.githubusercontent.com/a63414262/CF-Server-Monitor-Pro/refs/heads/main/nodes.json');
-            if (res.ok) {
+            const res = await Promise.race([
+                fetch('https://raw.githubusercontent.com/a63414262/CF-Server-Monitor-Pro/refs/heads/main/nodes.json'),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('nodes.json seed timeout')), 1500)),
+            ]);
+            if (res && res.ok) {
                 const dataText = await res.text();
                 await db.prepare("INSERT INTO probe_settings (key, value) VALUES ('cached_nodes_data', ?)").bind(dataText).run();
             }
@@ -1016,7 +1022,17 @@ async function initializeDbSchema(db) {
 
 async function ensureDbSchema(db) {
     if (!schemaReadyPromise) {
-        schemaReadyPromise = initializeDbSchema(db).catch(error => {
+        schemaReadyPromise = (async () => {
+            // Fast path: production DBs already migrated. Skip dozens of ALTER probes per isolate.
+            try {
+                const row = await db.prepare("SELECT val FROM sys_config WHERE key = 'schema_version'").first();
+                if (row && Number(row.val) === DB_SCHEMA_VERSION) return;
+            } catch (e) {}
+            await initializeDbSchema(db);
+            try {
+                await db.prepare("INSERT OR REPLACE INTO sys_config (key, val, ts) VALUES ('schema_version', ?, ?)").bind(String(DB_SCHEMA_VERSION), Date.now()).run();
+            } catch (e) {}
+        })().catch(error => {
             schemaReadyPromise = null;
             throw error;
         });
