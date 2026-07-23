@@ -7,21 +7,143 @@ set -eu
 # 支持: Ubuntu 18-24 / Debian 10-13 / Alpine Linux
 # ==========================================
 
-API_URL=""; VPS_IP=""; TOKEN=""; PROXY_API_URL=""
+API_URL=""; VPS_IP=""; TOKEN=""; PROXY_API_URL=""; UNINSTALL=0
+
+# Single source of truth for install backup / rollback / uninstall.
+# Paths are relative to / so they can be used with tar -C /.
+KUI_SERVICES="kui-agent sing-box proxy-lite"
+KUI_MANAGED_TREE_PATHS="opt/kui opt/proxy_lite etc/sing-box etc/proxy-lite"
+KUI_MANAGED_FILE_PATHS="
+etc/systemd/system/kui-agent.service
+etc/systemd/system/sing-box.service
+etc/systemd/system/proxy-lite.service
+lib/systemd/system/proxy-lite.service
+etc/init.d/kui-agent
+etc/init.d/sing-box
+etc/init.d/proxy-lite
+etc/conf.d/proxy-lite
+etc/sysctl.d/99-proxy-lite.conf
+var/log/kui-agent.log
+var/log/sing-box.log
+var/log/proxy-lite.log
+run/kui-agent.pid
+run/sing-box.pid
+run/proxy-lite.pid
+"
+# Optional binary install path (backup/rollback only; uninstall leaves system binary in place).
+KUI_OPTIONAL_BINARY_PATHS="usr/bin/sing-box"
 
 while [ "$#" -gt 0 ]; do
     case $1 in
+        --uninstall) UNINSTALL=1 ;;
         --api) [ "$#" -ge 2 ] || { echo "--api 缺少参数"; exit 1; }; API_URL="$2"; shift ;;
         --ip) [ "$#" -ge 2 ] || { echo "--ip 缺少参数"; exit 1; }; VPS_IP="$2"; shift ;;
         --token) [ "$#" -ge 2 ] || { echo "--token 缺少参数"; exit 1; }; TOKEN="$2"; shift ;;
         --proxy-api) [ "$#" -ge 2 ] || { echo "--proxy-api 缺少参数"; exit 1; }; PROXY_API_URL="$2"; shift ;;
+        -h|--help)
+            cat <<'USAGE'
+用法:
+  安装:  ... | bash  -- --api https://... --ip <VPS_IP> --token <TOKEN>
+  卸载:  ... | bash  -- --uninstall
+
+--uninstall  停止并移除本机 KUI Agent / sing-box unit / 住宅 proxy-lite 与相关数据
+             （保留系统包与 /usr/bin/sing-box 可执行文件；面板库请在面板「彻底移除」）
+USAGE
+            exit 0
+            ;;
         *) echo "未知参数: $1"; exit 1 ;;
     esac
     shift
 done
 
+detect_init_system() {
+    if [ -d /run/systemd/system ] && [ "$(cat /proc/1/comm 2>/dev/null || true)" = "systemd" ] && command -v systemctl >/dev/null 2>&1; then echo systemd
+    elif [ -x /sbin/openrc-run ] && command -v rc-service >/dev/null 2>&1; then echo openrc
+    else echo none; fi
+}
+
+stop_kui_services() {
+    INIT_SYS="$1"
+    if [ "$INIT_SYS" = "systemd" ]; then
+        # shellcheck disable=SC2086
+        systemctl stop $KUI_SERVICES >/dev/null 2>&1 || true
+    elif [ "$INIT_SYS" = "openrc" ]; then
+        for svc in $KUI_SERVICES; do
+            rc-service "$svc" stop >/dev/null 2>&1 || true
+        done
+    else
+        pkill -f '/opt/kui/run-agent.sh' 2>/dev/null || true
+        pkill -f '/opt/kui/agent.py' 2>/dev/null || true
+        pkill -f '/opt/proxy_lite/lite_manager.py' 2>/dev/null || true
+        pkill -f '/opt/proxy_lite/run-proxy.sh' 2>/dev/null || true
+        pkill -f 'sing-box run -c /etc/sing-box/config.json' 2>/dev/null || true
+    fi
+}
+
+disable_kui_services() {
+    INIT_SYS="$1"
+    if [ "$INIT_SYS" = "systemd" ]; then
+        for svc in $KUI_SERVICES; do
+            systemctl disable "$svc" >/dev/null 2>&1 || true
+        done
+        systemctl daemon-reload >/dev/null 2>&1 || true
+        systemctl reset-failed >/dev/null 2>&1 || true
+    elif [ "$INIT_SYS" = "openrc" ]; then
+        for svc in $KUI_SERVICES; do
+            rc-update del "$svc" default >/dev/null 2>&1 || true
+        done
+    fi
+}
+
+remove_kui_managed_files() {
+    for rel in $KUI_MANAGED_TREE_PATHS; do
+        rm -rf "/$rel"
+    done
+    for rel in $KUI_MANAGED_FILE_PATHS; do
+        [ -n "$rel" ] || continue
+        rm -f "/$rel"
+    done
+}
+
+collect_existing_backup_items() {
+    items=""
+    for rel in $KUI_MANAGED_TREE_PATHS $KUI_MANAGED_FILE_PATHS $KUI_OPTIONAL_BINARY_PATHS; do
+        [ -n "$rel" ] || continue
+        [ ! -e "/$rel" ] || items="$items $rel"
+    done
+    echo "$items"
+}
+
+uninstall_kui() {
+    INIT_SYS=$(detect_init_system)
+    echo "=========================================="
+    echo " 🧹 卸载 KUI 节点组件 (init=$INIT_SYS)"
+    echo "=========================================="
+
+    stop_kui_services "$INIT_SYS"
+    disable_kui_services "$INIT_SYS"
+    remove_kui_managed_files
+
+    if command -v sing-box >/dev/null 2>&1; then
+        echo " 提示: 系统仍保留 sing-box 可执行文件 ($(command -v sing-box))，如需一并删除请手动处理。"
+    fi
+    if [ "$INIT_SYS" = "none" ]; then
+        echo " 提示: 未检测到 systemd/OpenRC，仅做了路径清理与 best-effort 进程结束。"
+    fi
+
+    echo "=========================================="
+    echo " ✅ 本机 KUI 托管组件清理完成"
+    echo " 面板侧请再点「彻底移除」清理数据库记录（若尚未删除）。"
+    echo "=========================================="
+}
+
+if [ "$UNINSTALL" -eq 1 ]; then
+    uninstall_kui
+    exit 0
+fi
+
 if [ -z "$API_URL" ] || [ -z "$VPS_IP" ] || [ -z "$TOKEN" ]; then
-    echo "❌ 错误: 缺少必要参数！"
+    echo "❌ 错误: 缺少必要参数！安装需要 --api --ip --token；卸载请传 --uninstall"
     exit 1
 fi
 
@@ -43,35 +165,36 @@ case "$OS" in
     alpine|debian|ubuntu) ;;
     *) echo "不支持的发行版: $OS"; exit 1 ;;
 esac
-
-detect_init_system() {
-    if [ -d /run/systemd/system ] && [ "$(cat /proc/1/comm 2>/dev/null || true)" = "systemd" ] && command -v systemctl >/dev/null 2>&1; then echo systemd
-    elif [ -x /sbin/openrc-run ] && command -v rc-service >/dev/null 2>&1; then echo openrc
-    else echo none; fi
-}
 INIT_SYS=$(detect_init_system)
 [ "$INIT_SYS" != none ] || { echo "❌ 需要正在运行的 systemd 或 OpenRC"; exit 1; }
 
 INSTALL_SUCCESS=0
 BACKUP_DIR=$(mktemp -d /tmp/kui-install-backup.XXXXXX)
 chmod 700 "$BACKUP_DIR"
-BACKUP_ITEMS=""
-for item in opt/kui etc/sing-box usr/bin/sing-box etc/systemd/system/kui-agent.service etc/systemd/system/sing-box.service etc/init.d/kui-agent etc/init.d/sing-box opt/proxy_lite etc/proxy-lite etc/systemd/system/proxy-lite.service etc/init.d/proxy-lite etc/conf.d/proxy-lite; do
-    [ ! -e "/$item" ] || BACKUP_ITEMS="$BACKUP_ITEMS $item"
-done
+BACKUP_ITEMS=$(collect_existing_backup_items)
 [ -z "$BACKUP_ITEMS" ] || tar -C / -czf "$BACKUP_DIR/system.tgz" $BACKUP_ITEMS
 
 rollback_install() {
     status=$?
     if [ "$INSTALL_SUCCESS" -ne 1 ]; then
         echo "❌ 安装未完成，正在恢复上一个可用版本..."
-        if [ "$INIT_SYS" = "openrc" ]; then rc-service kui-agent stop >/dev/null 2>&1 || true; rc-service sing-box stop >/dev/null 2>&1 || true; rc-service proxy-lite stop >/dev/null 2>&1 || true
-        else systemctl stop kui-agent sing-box proxy-lite >/dev/null 2>&1 || true; fi
-        rm -rf /opt/kui /etc/sing-box /opt/proxy_lite /etc/proxy-lite
-        rm -f /usr/bin/sing-box /etc/systemd/system/kui-agent.service /etc/systemd/system/sing-box.service /etc/systemd/system/proxy-lite.service /etc/init.d/kui-agent /etc/init.d/sing-box /etc/init.d/proxy-lite /etc/conf.d/proxy-lite
+        stop_kui_services "$INIT_SYS"
+        remove_kui_managed_files
+        # install may have replaced binary; always drop managed binary path before restore
+        for rel in $KUI_OPTIONAL_BINARY_PATHS; do
+            [ -n "$rel" ] || continue
+            rm -f "/$rel"
+        done
         [ ! -f "$BACKUP_DIR/system.tgz" ] || tar -C / -xzf "$BACKUP_DIR/system.tgz"
-        if [ "$INIT_SYS" = "openrc" ]; then rc-service kui-agent start >/dev/null 2>&1 || true; rc-service sing-box start >/dev/null 2>&1 || true; rc-service proxy-lite start >/dev/null 2>&1 || true
-        else systemctl daemon-reload >/dev/null 2>&1 || true; systemctl start kui-agent sing-box proxy-lite >/dev/null 2>&1 || true; fi
+        if [ "$INIT_SYS" = "openrc" ]; then
+            for svc in $KUI_SERVICES; do
+                rc-service "$svc" start >/dev/null 2>&1 || true
+            done
+        else
+            systemctl daemon-reload >/dev/null 2>&1 || true
+            # shellcheck disable=SC2086
+            systemctl start $KUI_SERVICES >/dev/null 2>&1 || true
+        fi
     fi
     rm -rf "$BACKUP_DIR"
     exit "$status"
@@ -86,19 +209,10 @@ echo "=========================================="
 export CURL_USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
 
 echo "[1/7] 🧹 正在清理历史残留..."
-if [ "$INIT_SYS" = "openrc" ]; then
-    rc-service kui-agent stop >/dev/null 2>&1 || true
-    rc-service sing-box stop >/dev/null 2>&1 || true
-    rc-update del kui-agent default >/dev/null 2>&1 || true
-    rc-update del sing-box default >/dev/null 2>&1 || true
-    rm -f /etc/init.d/kui-agent /etc/init.d/sing-box
-else
-    systemctl stop kui-agent >/dev/null 2>&1 || true
-    systemctl stop sing-box >/dev/null 2>&1 || true
-    rm -f /etc/systemd/system/kui-agent.service
-    systemctl daemon-reload >/dev/null 2>&1 || true
-fi
-rm -rf /opt/kui /etc/sing-box/config.json
+# Same lifecycle primitives as --uninstall / rollback (without dropping optional binaries yet).
+stop_kui_services "$INIT_SYS"
+disable_kui_services "$INIT_SYS"
+remove_kui_managed_files
 
 echo "[2/7] ⚡ 保留系统现有软件源..."
 if [ "$INIT_SYS" = "openrc" ]; then

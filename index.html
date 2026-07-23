@@ -541,13 +541,19 @@
                         <div class="p-4 md:p-6 bg-slate-100/50 border-t border-white flex flex-col gap-3">
                             <div class="bg-slate-800 p-4 rounded-[1.25rem] group shadow-inner transition-colors">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase mb-2 flex justify-between items-center">
-                                    <span>Full Deploy Command · KUI + 住宅双隧道</span>
+                                    <span>节点命令行 · 本机 root 执行</span>
                                     <div class="flex gap-2 text-[9px]">
                                         <label class="cursor-pointer hover:text-white flex items-center gap-1"><input type="radio" v-model="deployOsMap[vps.ip]" @change="saveOsMap" value="debian" class="accent-indigo-500"> Ubuntu/Debian</label>
                                         <label class="cursor-pointer hover:text-white flex items-center gap-1"><input type="radio" v-model="deployOsMap[vps.ip]" @change="saveOsMap" value="alpine" class="accent-indigo-500"> Alpine</label>
                                     </div>
                                 </div>
-                                <div class="text-emerald-400 font-mono text-xs truncate cursor-pointer hover:text-emerald-300 transition-colors" @click="copyCommand(generateCmd(vps.ip), '部署指令已复制！')">{{ generateCmd(vps.ip) }}</div>
+                                <div v-for="cli in vpsCliCommands(vps.ip)" :key="cli.id" class="mb-3 last:mb-0">
+                                    <div class="text-[10px] font-bold uppercase tracking-wider flex justify-between items-center gap-2" :class="cli.tone === 'rose' ? 'text-rose-300/90' : 'text-slate-400'">
+                                        <span>{{ cli.label }}</span>
+                                        <span v-if="cli.hint" class="text-[9px] text-slate-500 normal-case font-medium">{{ cli.hint }}</span>
+                                    </div>
+                                    <div class="mt-1 font-mono text-xs truncate cursor-pointer transition-colors" :class="cli.tone === 'rose' ? 'text-rose-300 hover:text-rose-200' : 'text-emerald-400 hover:text-emerald-300'" @click="copyCommand(cli.command, cli.copied)">{{ cli.command }}</div>
+                                </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-[1.25rem] cursor-pointer transition flex items-center justify-center text-white font-bold shadow-lg hover:scale-[1.02] active:scale-95 text-xs text-center" @click="copyCommand(generateSubLink(vps.ip, ''), '单机节点普通订阅已复制！')">复制该机普通订阅</div>
@@ -1504,7 +1510,35 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const deleteUser = async (username) => { if(confirm('⚠️ 确定删除用户？节点将归还给管理员。')) { await fetchApi(`/api/users?username=${username}`, { method: 'DELETE' }); refreshData(); } };
                 const resetUserTraffic = async (username) => { await fetchApi('/api/users', { method: 'PUT', body: JSON.stringify({ username, reset_traffic: true }) }); refreshData(); };
                 const addVps = async () => { if(!newVps.value.ip || !newVps.value.name) return alert('请输入名称和IP'); deployOsMap[newVps.value.ip] = newVps.value.os; saveOsMap(); await fetchApi('/api/vps', { method: 'POST', body: JSON.stringify({ ip: newVps.value.ip, name: newVps.value.name }) }); newVps.value = { name: '', ip: '', os: 'debian' }; refreshData(); fetchProbeData();};
-                const deleteVps = async (ip) => { if(confirm('🧨 确定移除该机器？该机器相关的探针数据、节点数据将被完全清空！')) { await fetchApi(`/api/vps?ip=${ip}`, { method: 'DELETE' }); refreshData(); fetchProbeData();} };
+                const deleteVps = async (ip) => {
+                    const uninstall = generateUninstallCmd(ip);
+                    const canCopy = uninstall && !uninstall.includes('请先刷新页面');
+                    let copied = false;
+                    if (canCopy && navigator.clipboard?.writeText) {
+                        try {
+                            await navigator.clipboard.writeText(uninstall);
+                            copied = true;
+                        } catch (_) {}
+                    }
+                    const msg = [
+                        '确定从面板彻底移除该机器？',
+                        '',
+                        '这会清空面板侧探针/节点等数据库记录，但不会自动卸载 VPS 上的进程。',
+                        '',
+                        copied
+                            ? '建议先在 VPS 用 root 执行卸载命令（已静默复制到剪贴板；也可在卡片「Uninstall Command」再点复制）：'
+                            : (canCopy
+                                ? '建议先在 VPS 用 root 执行卸载命令（自动复制失败，请在卡片「Uninstall Command」处手动复制）：'
+                                : '建议先在 VPS 用 root 执行卸载命令（当前无 Agent Token，请先刷新页面签发后再复制）：'),
+                        uninstall,
+                        '',
+                        '确认继续删除面板记录？'
+                    ].join('\n');
+                    if (!confirm(msg)) return;
+                    await fetchApi(`/api/vps?ip=${ip}`, { method: 'DELETE' });
+                    refreshData();
+                    fetchProbeData();
+                };
                 const egressModeLabel = mode => ({ native: '原生出口', residential: '住宅 IP 代理', warp_ipv4: 'WARP IPv4', warp_ipv6: 'WARP IPv6', warp_dual: 'WARP 双栈', socks5: '手动 SOCKS5' }[mode] || mode);
                 const egressModeOf = vps => vps.egress_mode || 'native';
                 const proxyModeOf = vps => vps.proxy_mode || 'global';
@@ -1599,7 +1633,30 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const getVpsName = (ip) => servers.value.find(s => s.ip === ip)?.name || ip;
                 
                 const saveOsMap = () => { localStorage.setItem('kui_deploy_os', JSON.stringify(deployOsMap)); };
-                const generateCmd = (ip) => { const osType = deployOsMap[ip] || 'debian'; const token = servers.value.find(s => s.ip === ip)?.agent_token || ''; if (!token) return '请先刷新页面以签发独立 Agent Token'; const scriptUrl = `${currentDomain}/api/agent_update?ip=${encodeURIComponent(ip)}&component=full-installer`; if (osType === 'alpine') return `apk update && apk add curl && curl -fsSL -H "Authorization: ${token}" "${scriptUrl}" | sh -s -- --api "${currentDomain}" --ip "${ip}" --token "${token}"`; else return `apt-get update -y && apt-get install -y curl && bash <(curl -fsSL -H "Authorization: ${token}" "${scriptUrl}") --api "${currentDomain}" --ip "${ip}" --token "${token}"`; };
+                const agentTokenFor = (ip) => servers.value.find(s => s.ip === ip)?.agent_token || '';
+                const fullInstallerUrl = (ip) => `${currentDomain}/api/agent_update?ip=${encodeURIComponent(ip)}&component=full-installer`;
+                // One shell builder for install/uninstall; only trailing args differ.
+                const installerShell = (ip, scriptArgs) => {
+                    const osType = deployOsMap[ip] || 'debian';
+                    const token = agentTokenFor(ip);
+                    if (!token) return '请先刷新页面以签发独立 Agent Token';
+                    const scriptUrl = fullInstallerUrl(ip);
+                    const auth = `-H "Authorization: ${token}"`;
+                    if (osType === 'alpine') {
+                        return `apk update && apk add curl && curl -fsSL ${auth} "${scriptUrl}" | sh -s -- ${scriptArgs}`;
+                    }
+                    return `apt-get update -y && apt-get install -y curl && bash <(curl -fsSL ${auth} "${scriptUrl}") ${scriptArgs}`;
+                };
+                const generateCmd = (ip) => {
+                    const token = agentTokenFor(ip);
+                    // installerShell already returns the missing-token message when token is empty.
+                    return installerShell(ip, `--api "${currentDomain}" --ip "${ip}" --token "${token}"`);
+                };
+                const generateUninstallCmd = (ip) => installerShell(ip, '--uninstall');
+                const vpsCliCommands = (ip) => ([
+                    { id: 'install', label: 'Full Deploy Command · KUI + 住宅双隧道', hint: '', tone: 'emerald', command: generateCmd(ip), copied: '部署指令已复制！' },
+                    { id: 'uninstall', label: 'Uninstall Command · 本机卸载组件', hint: '不删面板库；库请点「彻底移除」', tone: 'rose', command: generateUninstallCmd(ip), copied: '卸载指令已复制！' },
+                ]);
 
                 const saveSiteTitle = async () => { if(!siteTitleInput.value) return alert('名称不能为空！'); await fetchApi('/api/settings', { method: 'POST', body: JSON.stringify({ site_title: siteTitleInput.value }) }); siteTitle.value = siteTitleInput.value; alert('✅ KUI 聚合面板名称保存成功！'); };
                 const applyClashRuleTemplate = (tpl) => {
@@ -1897,7 +1954,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     isLoggedIn, showLoginModal, loginUser, password, currentUser, role, activeTab, 
                     servers, nodes, users, newVps, newNodeParams, newUser, 
                     login, logout, refreshData, addUser, toggleUser, deleteUser, resetUserTraffic, addVps, deleteVps, addNode, deleteNode, toggleNode, resetTraffic,
-                    getNodesByIp, getVpsName, formatBytes, formatDate, getExpireText, getTrafficPercent, getPingColor, isOnline, generateCmd, generateSubLink, copyCommand,
+                    getNodesByIp, getVpsName, formatBytes, formatDate, getExpireText, getTrafficPercent, getPingColor, isOnline, generateCmd, generateUninstallCmd, vpsCliCommands, generateSubLink, copyCommand,
                     globalOnline, globalTraffic, globalSpeedIn, globalSpeedOut, deployOsMap, saveOsMap, siteTitle, siteTitleInput, saveSiteTitle, clashRulesInput, clashRulesSaved, clashRulesDefault, clashRuleProvidersInput, clashRuleProvidersSaved, clashRuleTemplates, clashRulesMaxChars, clashRuleProvidersMaxChars, applyClashRuleTemplate, resetClashRulesToDefault, saveClashRules, userNewPassword, updateUserPassword, resetMySubLink, generateUUIDForNewUser, batchStartPort, batchUser, deployAllProtocols,
                     probeSys, publicProbeServers, filteredProbeServers, probeView, probeDetailId, probeDetail, setProbeView, openProbeDetail, probeGlobalOnline, probeGlobalOffline, probeGlobalSpeedIn, probeGlobalSpeedOut, probeGlobalNetRx, probeGlobalNetTx, filteredProbeGroups, probeCountryStats, currentFilter,
                     saveProbeSettings, saveSubscriptionProtection, adminProbeServers, probeEditModalOpen, editingProbeNode, openProbeEditModal, saveProbeEdit, deleteProbeNode, currentDomain,
