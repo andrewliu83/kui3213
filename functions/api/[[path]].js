@@ -1142,8 +1142,14 @@ async function handleProbeAPI(request, env, context, pathArray) {
     if (method === 'GET' && subPath === 'public') {
         const isAjax = url.searchParams.get('ajax') === '1';
         const cacheKey = new Request(`${url.origin}/api/probe/public?ajax=${isAjax ? '1' : '0'}`);
-        const cached = await caches.default.match(cacheKey);
-        if (cached) return cached;
+        // Cache API match can hang under isolate pressure; never block the public dashboard on it.
+        try {
+            const cached = await Promise.race([
+                caches.default.match(cacheKey),
+                new Promise((resolve) => setTimeout(() => resolve(null), 250)),
+            ]);
+            if (cached) return cached;
+        } catch (e) {}
         const settings = { theme: 'theme1', is_public: 'true', site_title: '⚡ Server Monitor Pro', show_price: 'true', show_expire: 'true', show_bw: 'true', show_tf: 'true', custom_css: '', custom_bg: '', custom_head: '', custom_script: '', report_interval: '5', enable_popup: 'false', popup_content: '', cached_nodes_data: '' };
         try { const { results } = await db.prepare('SELECT * FROM probe_settings').all(); if (results) results.forEach(r => settings[r.key] = r.value); } catch(e){}
         const authHeader = request.headers.get("Authorization");
@@ -1154,7 +1160,12 @@ async function handleProbeAPI(request, env, context, pathArray) {
         for (const key of Object.keys(settings)) if (!publicKeys.has(key)) delete settings[key];
         const realtime = env.REALTIME_URL ? null : await db.prepare("SELECT val FROM sys_config WHERE key = 'realtime_url'").first();
         const response = Response.json({ settings, servers, realtime_url: env.REALTIME_URL || realtime?.val || '' }, { headers: { 'Cache-Control': 'public, max-age=15, s-maxage=15' } });
-        if (settings.is_public === 'true') context.waitUntil(caches.default.put(cacheKey, response.clone()));
+        if (settings.is_public === 'true') {
+            context.waitUntil(Promise.race([
+                caches.default.put(cacheKey, response.clone()).catch(() => {}),
+                new Promise((resolve) => setTimeout(resolve, 500)),
+            ]));
+        }
         return response;
     }
 

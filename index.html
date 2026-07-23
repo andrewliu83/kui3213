@@ -1486,17 +1486,56 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const probeCountryStats = computed(() => { const stats = {}; publicProbeServers.value.forEach(s => { let code = (s.country || 'xx').toUpperCase(); if(code === 'TW') code = 'CN'; if(code !== 'XX') stats[code] = (stats[code] || 0) + 1; }); return stats; });
 
                 let authGeneration = 0;
+                const FLEET_READ_TIMEOUT_MS = 15000;
+                const PROBE_READ_TIMEOUT_MS = 15000;
+                const withTimeout = (promise, ms, label = '请求超时') => {
+                    let timer = null;
+                    const timeout = new Promise((_, reject) => {
+                        timer = setTimeout(() => {
+                            const error = new Error(label);
+                            error.name = 'TimeoutError';
+                            reject(error);
+                        }, ms);
+                    });
+                    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+                };
+                const fetchWithTimeout = async (url, options = {}, timeoutMs = FLEET_READ_TIMEOUT_MS) => {
+                    const controller = new AbortController();
+                    const parentSignal = options.signal;
+                    const onAbort = () => controller.abort();
+                    if (parentSignal) {
+                        if (parentSignal.aborted) controller.abort();
+                        else parentSignal.addEventListener('abort', onAbort, { once: true });
+                    }
+                    const timer = setTimeout(() => controller.abort(), timeoutMs);
+                    try {
+                        return await fetch(url, { ...options, signal: controller.signal });
+                    } catch (error) {
+                        if (error?.name === 'AbortError' && !parentSignal?.aborted) {
+                            const timeoutError = new Error(`请求超时（${Math.round(timeoutMs / 1000)}s）`);
+                            timeoutError.name = 'TimeoutError';
+                            throw timeoutError;
+                        }
+                        throw error;
+                    } finally {
+                        clearTimeout(timer);
+                        if (parentSignal) parentSignal.removeEventListener('abort', onAbort);
+                    }
+                };
                 const fetchApi = async (url, options = {}) => {
                     const generation = authGeneration; const requestUser = currentUser.value; const requestKey = authKey.value;
                     options.headers = { ...options.headers, 'Authorization': `Bearer ${requestKey}` };
-                    const res = await fetch(url, options);
+                    const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : FLEET_READ_TIMEOUT_MS;
+                    const { timeoutMs: _ignoredTimeout, quiet: _ignoredQuiet, ...fetchOptions } = options;
+                    const res = await fetchWithTimeout(url, fetchOptions, timeoutMs);
                     if (generation !== authGeneration || requestUser !== currentUser.value) throw new Error('Stale session response');
                     if (res.status === 401) { logout(); throw new Error('Unauthorized'); }
                     if (!res.ok) {
                         const raw = await res.text();
                         let message = raw || `HTTP ${res.status}`;
                         try { const err = JSON.parse(raw); message = err.error || err.message || message; } catch (e) {}
-                        alert(`❌ 后端报错: ${message.substring(0, 300)}`);
+                        // Fleet list refresh should not spam modal alerts on every timeout/retry path.
+                        if (!options.quiet) alert(`❌ 后端报错: ${message.substring(0, 300)}`);
                         throw new Error(message);
                     }
                     if (options.method && options.method !== 'GET' && (/^\/api\/(nodes|vps|config)/.test(url) || /^\/api\/proxy\/(config|switch)/.test(url))) {
@@ -1540,7 +1579,17 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 const initMap = async () => {
                     if (myMap) return;
                     myMap = L.map('map-container', { zoomControl: true, attributionControl: false, minZoom: 1 }).setView([30, 10], 2);
-                    try { const res = await fetch('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json'); worldGeoJson = await res.json(); drawMarkers(); } catch (e) {}
+                    const loadGeo = async (attempt = 0) => {
+                        try {
+                            const res = await fetchWithTimeout('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json', {}, 12000);
+                            if (!res.ok) throw new Error(`geojson ${res.status}`);
+                            worldGeoJson = await res.json();
+                            drawMarkers();
+                        } catch (e) {
+                            if (attempt < 2) setTimeout(() => loadGeo(attempt + 1), 2000 * (attempt + 1));
+                        }
+                    };
+                    loadGeo();
                 };
                 const drawMarkers = () => {
                     if(!myMap || !worldGeoJson) return;
@@ -1608,6 +1657,19 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                 let isFirstLoad = true;
                 let isFetchingProbe = false;
                 let probeDetailRequestGeneration = 0;
+                let probePublicRetryTimer = null;
+                let probePublicRetryDelay = 3000;
+                const scheduleProbePublicRetry = () => {
+                    if (probePublicRetryTimer || document.hidden) return;
+                    // Keep probing until the public list is populated; realtime metrics cannot invent the node inventory.
+                    if (publicProbeServers.value.length) return;
+                    const delay = probePublicRetryDelay;
+                    probePublicRetryDelay = Math.min(probePublicRetryDelay * 2, 30000);
+                    probePublicRetryTimer = setTimeout(() => {
+                        probePublicRetryTimer = null;
+                        if (!document.hidden && !publicProbeServers.value.length) fetchProbeData();
+                    }, delay);
+                };
                 const fetchProbeData = async (isDetail = false) => {
                     const detailRequest = !!probeDetailId.value;
                     if (!detailRequest && isFetchingProbe) return;
@@ -1619,7 +1681,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         if (probeDetailId.value) {
                             const requestedId = probeDetailId.value;
                             const generation = ++probeDetailRequestGeneration;
-                            const res = await fetch(`/api/probe/detail?id=${encodeURIComponent(requestedId)}`, {headers: authHeader});
+                            const res = await fetchWithTimeout(`/api/probe/detail?id=${encodeURIComponent(requestedId)}`, {headers: authHeader}, PROBE_READ_TIMEOUT_MS);
                             if(!res.ok) { if (probeDetailId.value === requestedId && generation === probeDetailRequestGeneration) probeDetailId.value = null; throw new Error("Detail fetch failed"); }
                             const detail = await res.json();
                             if (probeDetailId.value !== requestedId || generation !== probeDetailRequestGeneration) return;
@@ -1629,19 +1691,21 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         } else {
                             const ajaxParam = isFirstLoad ? '' : '?ajax=1';
                             isFirstLoad = false;
-                            const res = await fetch(`/api/probe/public${ajaxParam}`, {headers: authHeader});
+                            const res = await fetchWithTimeout(`/api/probe/public${ajaxParam}`, {headers: authHeader}, PROBE_READ_TIMEOUT_MS);
                             if (!res.ok) { if(res.status===401) showLoginModal.value = true; throw new Error("Private Dashboard"); }
                             const data = await res.json(); 
-                            Object.assign(probeSys, data.settings); 
-                            if (data.settings.cached_nodes_data) parseCachedNodes(data.settings.cached_nodes_data);
+                            Object.assign(probeSys, data.settings || {}); 
+                            if (data.settings?.cached_nodes_data) parseCachedNodes(data.settings.cached_nodes_data);
                             const liveByIp = new Map(publicProbeServers.value.filter(item => item._realtime_ts).map(item => [normalizeRealtimeKey(item.id), item]));
                             publicProbeServers.value = (data.servers || []).map(item => mergeServerLiveMetrics(item, liveByIp.get(normalizeRealtimeKey(item.id)), 'last_updated'));
+                            probePublicRetryDelay = 3000;
+                            if (probePublicRetryTimer) { clearTimeout(probePublicRetryTimer); probePublicRetryTimer = null; }
                             if (data.realtime_url && data.realtime_url !== realtimeUrl.value) realtimeUrl.value = data.realtime_url;
                             // A logged-in admin must use the Dashboard channel even
                             // while viewing the probe page. Re-check after every
                             // probe load to avoid the login/realtime URL race.
                             if (isLoggedIn.value && role.value === 'admin' && realtimeUrl.value) queueMicrotask(connectRealtime);
-                            else if (!isLoggedIn.value && data.settings.is_public === 'true') queueMicrotask(connectPublicRealtime);
+                            else if (!isLoggedIn.value && data.settings?.is_public === 'true') queueMicrotask(connectPublicRealtime);
                             updateCustomStyles();
                             if ((!isLoggedIn.value || activeTab.value === 'probe') && probeSys.custom_script && !document.getElementById('kui-custom-html-wrapper')) updateCustomScript(probeSys.custom_script);
                             if (probeView.value === 'map') drawMarkers();
@@ -1653,7 +1717,9 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                                 if (!lastSeen || Date.now() - parseInt(lastSeen) > 86400000) showWelcomePopup.value = true;
                             }
                         }
-                    } catch(e) {} finally { if (!detailRequest) isFetchingProbe = false; }
+                    } catch(e) {
+                        if (!detailRequest) scheduleProbePublicRetry();
+                    } finally { if (!detailRequest) isFetchingProbe = false; }
                 };
 
                 let isFetchingKUI = false;
@@ -1746,7 +1812,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         if (fleetServerQuery.value.trim()) params.set('q', fleetServerQuery.value.trim());
                         if (fleetServerStatus.value) params.set('status', fleetServerStatus.value);
                         if (fleetServerEgress.value) params.set('egress', fleetServerEgress.value);
-                        const data = await (await fetchApi(`/api/servers?${params}`, { signal: fleetServersController.signal })).json();
+                        const data = await (await fetchApi(`/api/servers?${params}`, { signal: fleetServersController.signal, timeoutMs: FLEET_READ_TIMEOUT_MS, quiet: true })).json();
                         if (request !== fleetServersRequest) return;
                         const page = pagedItems(data, 'servers');
                         fleetServers.value = shouldReset ? page : mergeByKey(fleetServers.value, page, 'ip');
@@ -1754,7 +1820,11 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         fleetServersFilterSignature = filterSignature;
                         applyFleetMeta(data);
                     } catch (error) {
-                        if (request === fleetServersRequest && error?.name !== 'AbortError') fleetServersError.value = error.message || '服务器概览读取失败';
+                        if (request === fleetServersRequest && error?.name !== 'AbortError') {
+                            fleetServersError.value = error?.name === 'TimeoutError'
+                                ? (error.message || '服务器概览读取超时，请点击刷新重试')
+                                : (error.message || '服务器概览读取失败');
+                        }
                     } finally {
                         if (request === fleetServersRequest) fleetServersLoading.value = false;
                     }
@@ -1769,7 +1839,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                         if (fleetServerQuery.value.trim()) params.set('q', fleetServerQuery.value.trim());
                         if (fleetServerStatus.value) params.set('status', fleetServerStatus.value);
                         if (fleetServerEgress.value) params.set('egress', fleetServerEgress.value);
-                        const data = await (await fetchApi(`/api/servers?${params}`, { signal: fleetServerMetricsController.signal })).json();
+                        const data = await (await fetchApi(`/api/servers?${params}`, { signal: fleetServerMetricsController.signal, timeoutMs: FLEET_READ_TIMEOUT_MS, quiet: true })).json();
                         if (request !== fleetServerMetricsRequest || filterSignature !== getFleetServerFilterSignature()) return;
                         const updates = new Map(pagedItems(data, 'servers').map(server => [server.ip, server]));
                         fleetServers.value.forEach(server => { const update = updates.get(server.ip); if (update) Object.assign(server, update); });
@@ -2479,8 +2549,10 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     if (!pingTimer) { sendUiPing(); pingTimer = setInterval(() => { if (isLoggedIn.value && !document.hidden) sendUiPing(); }, FALLBACK_UI_PING_INTERVAL); }
                 };
                 const startProbePolling = () => { 
-                    if ((realtimeConnected.value && isLoggedIn.value && role.value === 'admin') || publicRealtimeSocket?.readyState === WebSocket.OPEN) return;
-                    if (!probeTimer) { fetchProbeData(); probeTimer = setInterval(() => { if (!document.hidden && (!isLoggedIn.value || activeTab.value === 'probe')) fetchProbeData(); }, FALLBACK_PROBE_INTERVAL); }
+                    // Realtime only patches metrics for known servers. Keep HTTP backfill while the inventory is empty.
+                    const realtimeCoversInventory = publicProbeServers.value.length > 0 && ((realtimeConnected.value && isLoggedIn.value && role.value === 'admin') || publicRealtimeSocket?.readyState === WebSocket.OPEN);
+                    if (realtimeCoversInventory) return;
+                    if (!probeTimer) { fetchProbeData(); probeTimer = setInterval(() => { if (!document.hidden && (!isLoggedIn.value || activeTab.value === 'probe' || !publicProbeServers.value.length)) fetchProbeData(); }, FALLBACK_PROBE_INTERVAL); }
                 }
                 const stopProbePolling = () => { if (probeTimer) { clearInterval(probeTimer); probeTimer = null; } };
                 const stopPolling = () => { if (dataTimer) { clearInterval(dataTimer); dataTimer = null; } if (pingTimer) { clearInterval(pingTimer); pingTimer = null; } };
