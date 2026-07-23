@@ -1403,7 +1403,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                             const detail = await res.json();
                             if (probeDetailId.value !== requestedId || generation !== probeDetailRequestGeneration) return;
                             const live = normalizeRealtimeKey(probeDetail.value?.id) === normalizeRealtimeKey(requestedId) ? probeDetail.value : null;
-                            probeDetail.value = live && Number(live._realtime_ts || 0) > Number(detail.last_updated || 0) ? { ...detail, ...live } : detail;
+                            probeDetail.value = mergeServerLiveMetrics(detail, live, 'last_updated');
                             updateProbeDetailCharts(probeDetail.value);
                         } else {
                             const ajaxParam = isFirstLoad ? '' : '?ajax=1';
@@ -1414,10 +1414,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                             Object.assign(probeSys, data.settings); 
                             if (data.settings.cached_nodes_data) parseCachedNodes(data.settings.cached_nodes_data);
                             const liveByIp = new Map(publicProbeServers.value.filter(item => item._realtime_ts).map(item => [normalizeRealtimeKey(item.id), item]));
-                            publicProbeServers.value = (data.servers || []).map(item => {
-                                const live = liveByIp.get(normalizeRealtimeKey(item.id));
-                                return live && live._realtime_ts > Number(item.last_updated || 0) ? { ...item, ...live } : item;
-                            });
+                            publicProbeServers.value = (data.servers || []).map(item => mergeServerLiveMetrics(item, liveByIp.get(normalizeRealtimeKey(item.id)), 'last_updated'));
                             if (data.realtime_url && data.realtime_url !== realtimeUrl.value) realtimeUrl.value = data.realtime_url;
                             // A logged-in admin must use the Dashboard channel even
                             // while viewing the probe page. Re-check after every
@@ -1461,7 +1458,7 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
                     try {
                         const res = await fetchApi('/api/data'); const data = await res.json();
                         const liveByIp = new Map(servers.value.filter(item => item._realtime_ts).map(item => [normalizeRealtimeKey(item.ip), item]));
-                        servers.value = (data.servers || []).map(item => { const live = liveByIp.get(normalizeRealtimeKey(item.ip)); return live && live._realtime_ts > Number(item.last_report || 0) ? { ...item, ...live } : item; }); nodes.value = data.nodes || []; users.value = data.users || [];
+                        servers.value = (data.servers || []).map(item => mergeServerLiveMetrics(item, liveByIp.get(normalizeRealtimeKey(item.ip)), 'last_report')); nodes.value = data.nodes || []; users.value = data.users || [];
                         if (data.siteTitle) { siteTitle.value = data.siteTitle; siteTitleInput.value = data.siteTitle; }
                         if (data.mySubToken) mySubToken.value = data.mySubToken;
                         if (typeof data.clashRules === 'string') {
@@ -1785,6 +1782,25 @@ body.theme11 #app, body.theme13 #app, body.theme14 #app, body.theme15 #app, body
 
                 let dataTimer = null; let pingTimer = null; let probeTimer = null;
                 const normalizeRealtimeKey = value => String(value || '').trim().replace(/^\[|\]$/g, '').toLowerCase();
+                // Live realtime cache may hold stale egress desired mode after a switch.
+                // Only merge metric/telemetry fields from live; D1/API owns egress config.
+                // Same-revision applied status may still come from live for snappier UI.
+                const LIVE_METRIC_KEYS = ['cpu', 'mem', 'disk', 'load', 'uptime', 'net_in_speed', 'net_out_speed', 'tcp_conn', 'udp_conn', 'last_report', 'realtime_state', 'boot_id', 'sequence', 'config_result', 'config_result_at', '_realtime_ts'];
+                const mergeServerLiveMetrics = (item, live, tsField = 'last_report') => {
+                    if (!live || !(Number(live._realtime_ts) > Number(item?.[tsField] || 0))) return item;
+                    const merged = { ...item };
+                    for (const key of LIVE_METRIC_KEYS) {
+                        if (live[key] !== undefined) merged[key] = live[key];
+                    }
+                    if (Number(live.egress_revision) === Number(item.egress_revision) && live.egress_status) {
+                        merged.egress_status = live.egress_status;
+                        if (live.egress_applied_mode != null) merged.egress_applied_mode = live.egress_applied_mode;
+                        if (live.egress_error !== undefined) merged.egress_error = live.egress_error;
+                        if (live.egress_ip) merged.egress_ip = live.egress_ip;
+                        if (live.egress_applied_revision != null) merged.egress_applied_revision = live.egress_applied_revision;
+                    }
+                    return merged;
+                };
                 const applyRealtimeSnapshot = (snapshot) => {
                     if (!snapshot?.ip) return;
                     const key = normalizeRealtimeKey(snapshot.ip);
