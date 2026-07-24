@@ -505,9 +505,12 @@ config_wakeup = threading.Event()
 heartbeat_wakeup = threading.Event()
 realtime_channel = None
 last_http_report = 0
-# Keep D1's fallback snapshot fresh for dashboard reloads and reconnects.
-# WebSocket remains the primary five-second live channel.
-REALTIME_HTTP_INTERVAL = 30
+# When WS is healthy, status-only HTTP is a slow D1 persistence fallback.
+# Live metrics stay on WebSocket; traffic batches bypass this interval.
+REALTIME_HTTP_INTERVAL = 180
+# When WS is healthy, config is event-driven (config.refresh). Periodic
+# HTTP is only a long-interval safety net, not a 30s poll.
+REALTIME_CONFIG_HTTP_INTERVAL = 600
 
 # 🌟 增加全局 Ping 状态缓存锁，防止在非测速轮次上传 '0' 导致前端图表归零
 last_pings = {"ct": "0", "cu": "0", "cm": "0", "bd": "0"}
@@ -1343,7 +1346,15 @@ def report_status(current_nodes, argo_urls, force_http=False, allow_http=True):
     # its message-size budget and hiding otherwise healthy server telemetry.
     websocket_status.pop("node_traffic", None)
     websocket_sent = realtime_channel.send(websocket_status) if realtime_channel and realtime_channel.connected else False
-    if websocket_sent and not force_http and not pending_http_started and time.time() - last_http_report < REALTIME_HTTP_INTERVAL:
+    # Status-only snapshots may skip HTTP while WS is healthy. Traffic batches
+    # and in-flight HTTP submissions must never wait on the slow interval.
+    if (
+        websocket_sent
+        and not force_http
+        and not pending_http_started
+        and not pending_report_batches
+        and time.time() - last_http_report < REALTIME_HTTP_INTERVAL
+    ):
         return True
     if realtime_channel and realtime_channel.enabled and not websocket_sent and time.time() - realtime_channel.last_disconnected < 30:
         return False
@@ -1654,5 +1665,8 @@ if __name__ == "__main__":
         elapsed = time.monotonic() - loop_started
         if elapsed > 20:
             print(f"[agent] slow loop completed in {elapsed:.1f}s", flush=True)
-        config_interval = REALTIME_HTTP_INTERVAL if realtime_channel and realtime_channel.connected else (30 if fast_mode else 300)
+        if realtime_channel and realtime_channel.connected:
+            config_interval = REALTIME_CONFIG_HTTP_INTERVAL
+        else:
+            config_interval = 30 if fast_mode else 300
         config_wakeup.wait(timeout=max(1, config_interval - min(config_interval - 1, elapsed)))

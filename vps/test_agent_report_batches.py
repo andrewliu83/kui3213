@@ -119,30 +119,24 @@ class AgentReportBatchTests(unittest.TestCase):
             agent.get_system_status = lambda interval: {"sample": status_sample["value"]}
             realtime = FakeRealtime()
             agent.realtime_channel = realtime
+            # Recent status-only HTTP must not block traffic batch drain.
             agent.last_http_report = agent.time.time()
             requests = []
 
             with mock.patch.object(agent.urllib.request, "urlopen", side_effect=post_recorder(requests, [{"interval": 5, "fast_mode": False}] * 2)):
                 self.assertTrue(agent.report_status(current_nodes, []))
-                self.assertEqual(requests, [])
-                queued = json.loads(state_path.read_text(encoding="utf-8"))["pending"]
-                self.assertEqual(len(queued["batches"]), 2)
-                self.assertTrue(all(batch["payload"] is None for batch in queued["batches"]))
-                self.assertNotIn("node_traffic", realtime.messages[0][0])
-
-                status_sample["value"] = 2
-                agent.last_http_report = 0
-                self.assertTrue(agent.report_status(current_nodes, []))
-
                 self.assertEqual(len(requests), 1)
                 self.assertEqual(len(requests[0]["node_traffic"]), 200)
-                self.assertEqual(requests[0]["sample"], 2)
+                self.assertEqual(requests[0]["sample"], 1)
+                self.assertNotIn("node_traffic", realtime.messages[0][0])
                 queued = json.loads(state_path.read_text(encoding="utf-8"))["pending"]
                 self.assertEqual(len(queued["batches"]), 1)
                 self.assertIsNone(queued["batches"][0]["payload"])
 
+                status_sample["value"] = 2
                 self.assertTrue(agent.report_status(current_nodes, []))
                 self.assertEqual(len(requests), 2)
+                self.assertEqual(requests[1]["sample"], 2)
                 self.assertIsNone(json.loads(state_path.read_text(encoding="utf-8"))["pending"])
 
     def test_empty_traffic_keeps_idle_cadence_and_still_cleans_baseline(self):
