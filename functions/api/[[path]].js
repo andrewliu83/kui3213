@@ -1941,34 +1941,9 @@ export async function onRequest(context) {
             }
         } catch (e) {}
 
-        // Residential SOCKS5 endpoints are runtime proxy records rather than
-        // regular protocol nodes, so append them explicitly for the admin.
-        // They include shared proxy credentials and must never be exposed to
-        // ordinary user subscriptions.
-        if (reqUser === adminUser && env.PROXY_USER && env.PROXY_PASS) {
-            try {
-                const cutoff = Date.now() - 1800000;
-                const { results: proxyServers } = await db.prepare('SELECT ip, details FROM proxy_ctrl_servers WHERE last_seen >= ?').bind(cutoff).all();
-                for (const server of proxyServers || []) {
-                    if (ip && server.ip !== ip) continue;
-                    let details = [];
-                    try { details = JSON.parse(server.details || '[]'); } catch {}
-                    const active = details.find(detail => detail?.active && Number.isInteger(Number(detail.port)) && Number(detail.port) >= 1 && Number(detail.port) <= 65535);
-                    if (!active) continue;
-                    const port = Number(active.port);
-                    const serverIp = formatIpForLink(server.ip);
-                    const name = `住宅 SOCKS5 | ${active.country || 'AUTO'} | ${server.ip}:${port}`;
-                    const encodedCredentials = btoa(unescape(encodeURIComponent(`${env.PROXY_USER}:${env.PROXY_PASS}`)));
-                    subLinks.push(`socks5://${encodedCredentials}@${serverIp}:${port}#${encodeURIComponent(name)}`);
-                    if (format === 'clash') {
-                        clashProxies.push(`  - name: ${yamlString(name)}\n    type: socks5\n    server: ${yamlString(serverIp)}\n    port: ${port}\n    username: ${yamlString(env.PROXY_USER)}\n    password: ${yamlString(env.PROXY_PASS)}\n    udp: true`);
-                        proxyNames.push(yamlString(name));
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to append residential SOCKS5 subscriptions:', error);
-            }
-        }
+        // Residential SOCKS5 runtime records (proxy_ctrl_servers + PROXY_USER/PASS)
+        // are never appended to Base64 or Clash subscriptions for any user,
+        // including admin. Control-plane /proxy/* endpoints remain separate.
 
         // --- 若为 Clash 格式，渲染 YAML 返回 ---
         if (format === 'clash') {

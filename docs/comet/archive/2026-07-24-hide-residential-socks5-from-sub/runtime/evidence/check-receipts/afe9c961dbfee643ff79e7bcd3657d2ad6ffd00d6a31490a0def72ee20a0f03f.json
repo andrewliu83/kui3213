@@ -1,0 +1,405 @@
+{
+  "schema": "comet.native.check-receipt.v1",
+  "change": "hide-residential-socks5-from-sub",
+  "sourceRevision": 3,
+  "checker": {
+    "policy": "scoped-text-safety",
+    "version": 1,
+    "hash": "0b8e0e9570269a64123ba2794f1f5125cf454695e1d7fda8f0acddf87ec4912f",
+    "limits": {
+      "maxFiles": 256,
+      "maxFileBytes": 1048576,
+      "maxTotalBytes": 8388608,
+      "maxIssues": 128
+    }
+  },
+  "inputHash": "eb080fb1cd6b6160b6e4a1ca7f574d49a53f3e1907ee56bbad7d8b767480f9b4",
+  "status": "failed",
+  "startedAt": "2026-07-24T12:41:42.118Z",
+  "endedAt": "2026-07-24T12:41:42.214Z",
+  "contract": {
+    "expectedHash": "672265a6da1fcde398cb9a3d6101705034b48c8d5c2c3ded217cdb059a742e1f",
+    "beforeHash": "672265a6da1fcde398cb9a3d6101705034b48c8d5c2c3ded217cdb059a742e1f",
+    "afterHash": "672265a6da1fcde398cb9a3d6101705034b48c8d5c2c3ded217cdb059a742e1f"
+  },
+  "implementation": {
+    "scopeHash": "59ddc25c3e03cb2fb1b47436d0e064c980c2459bec9533a97186273b84e39f5e",
+    "expectedSnapshotHash": "8c5ba98f7753b39f4b3cf29d46ea2194c7783cb14a9de2328cddf99ebc4cb8d2",
+    "beforeSnapshotHash": "8c5ba98f7753b39f4b3cf29d46ea2194c7783cb14a9de2328cddf99ebc4cb8d2",
+    "afterSnapshotHash": "8c5ba98f7753b39f4b3cf29d46ea2194c7783cb14a9de2328cddf99ebc4cb8d2"
+  },
+  "counts": {
+    "filesSelected": 1,
+    "filesScanned": 1,
+    "binaryFilesSkipped": 0,
+    "bytesScanned": 177600,
+    "issueCount": 72,
+    "recordedIssueCount": 72
+  },
+  "issues": [
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 955,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 956,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 957,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 960,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1106,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1111,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1117,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1220,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1250,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1469,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1470,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1535,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1537,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1538,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1539,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1541,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1545,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1549,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1551,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1555,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1558,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1561,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1583,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1601,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1604,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1605,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1606,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1607,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1638,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1640,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1642,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1643,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1653,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1758,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1759,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1760,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1761,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1762,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1766,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1768,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1770,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1771,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1775,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1779,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1780,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1781,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1783,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1784,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1785,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1786,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1787,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1788,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1789,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1790,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1791,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1793,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1794,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1795,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1801,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1802,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1803,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1831,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1850,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1981,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1982,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1983,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 1984,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 2283,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 2289,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 2294,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 2295,
+      "kind": "trailing-whitespace"
+    },
+    {
+      "path": "functions/api/[[path]].js",
+      "line": 2297,
+      "kind": "trailing-whitespace"
+    }
+  ],
+  "issuesTruncated": false,
+  "stale": false,
+  "staleReasons": [],
+  "receiptHash": "afe9c961dbfee643ff79e7bcd3657d2ad6ffd00d6a31490a0def72ee20a0f03f"
+}

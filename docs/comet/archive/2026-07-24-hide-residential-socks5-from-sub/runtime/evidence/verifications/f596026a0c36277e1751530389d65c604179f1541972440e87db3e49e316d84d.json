@@ -1,0 +1,128 @@
+{
+  "schema": "comet.native.verification-evidence.v1",
+  "change": "hide-residential-socks5-from-sub",
+  "sourceRevision": 3,
+  "result": "pass",
+  "freshness": "complete",
+  "contractHash": "672265a6da1fcde398cb9a3d6101705034b48c8d5c2c3ded217cdb059a742e1f",
+  "acceptanceCriteriaHash": "aebab1d6bcc4138d7fd1a4398e3632f2eb36bd43039e5392eee2060ac3743429",
+  "implementationScopeRef": "runtime/evidence/scopes/59ddc25c3e03cb2fb1b47436d0e064c980c2459bec9533a97186273b84e39f5e.json",
+  "implementationScopeHash": "59ddc25c3e03cb2fb1b47436d0e064c980c2459bec9533a97186273b84e39f5e",
+  "reportRef": "verification.md",
+  "reportHash": "8259f90d9a9c44068bea65cc31c8af1527aa6a3de88e2b4d6426eae8092f009d",
+  "acceptanceTrace": {
+    "schema": "comet.native.acceptance-trace.v1",
+    "nativeRootRef": "docs/comet",
+    "criteriaHash": "aebab1d6bcc4138d7fd1a4398e3632f2eb36bd43039e5392eee2060ac3743429",
+    "total": 11,
+    "evidenced": 11,
+    "skipped": 0,
+    "entries": [
+      {
+        "acceptanceId": "acceptance-0c627407c0f0e908506ca3d1f5b478342a525010b864f40507213ddc0bca1513",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-1f56317a41ae2b3371da875b413558abb73c1c68c869dd600fe5dc17ac6799ee",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-2279abbd5d261d93a077a99b3151e4741b068aba0dca984d862aad19a51bcb8d",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-2e665a06c2a7407c6dd2cfd6792dd00b3a7be4f1255ebfd551e0f00f397f23d9",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-328a08ab91335b75aee8b899ea43d8b09c72cfe4f7deb086fe1d606301b5b9cb",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-5deb34b647ed02b4a0f2bb6fc0ebbab35e8fb10fba661dbc2da39dbdc63588f5",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-5efe3d9b3b212ac810c27b6d938c881ee6cbdb709fbc6cb81a02f820d4235c59",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-630bb8a8d154b5e33645242380f2164cec07cb21296cb22f14e2fbaf900618eb",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-68f537321ce3c8a6bbfc0faa40a4b5f349977a4609d55613719707596cc8226f",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-bfb3ab8ab7a7f8ea713d24ccabb56bd77df3a641fb5a1dea253b9f8c650261f5",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-f939ee03eb239dd78667ec66053f412cb0dc02b8a5a8646b8552021913c806f6",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "functions/api/[[path]].js"
+        ],
+        "skippedReason": null
+      }
+    ],
+    "traceHash": "4d8c9aa9718fba8927be5e176f9dc36c720001a5fc74e0ce535ce7d21175dfbd"
+  },
+  "partialAllowanceRef": null,
+  "partialAllowanceHash": null,
+  "receiptRef": null,
+  "createdAt": "2026-07-24T12:42:21.566Z",
+  "envelopeHash": "f596026a0c36277e1751530389d65c604179f1541972440e87db3e49e316d84d"
+}
