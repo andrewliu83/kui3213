@@ -1,0 +1,123 @@
+{
+  "schema": "comet.native.verification-evidence.v1",
+  "change": "reduce-agent-http-when-ws",
+  "sourceRevision": 3,
+  "result": "pass",
+  "freshness": "complete",
+  "contractHash": "12d1afb51fe7062eaaa24e962d72a5c0e5967ae693f9c33dbb7228db8e85b708",
+  "acceptanceCriteriaHash": "0092ba968f34bb6fd6fab0d755dd013dfb70f6dcaceed41e2c2369e9b8dbc609",
+  "implementationScopeRef": "runtime/evidence/scopes/0c61c9bec6b10137a98261969a0c061092f9b7631ae29b0b83e9c89f72256e0f.json",
+  "implementationScopeHash": "0c61c9bec6b10137a98261969a0c061092f9b7631ae29b0b83e9c89f72256e0f",
+  "reportRef": "verification.md",
+  "reportHash": "7cb68e0b70f7e01c37e8c8fd1ba03005072a731cc13259c2b975a532906d6949",
+  "acceptanceTrace": {
+    "schema": "comet.native.acceptance-trace.v1",
+    "nativeRootRef": "docs/comet",
+    "criteriaHash": "0092ba968f34bb6fd6fab0d755dd013dfb70f6dcaceed41e2c2369e9b8dbc609",
+    "total": 10,
+    "evidenced": 10,
+    "skipped": 0,
+    "entries": [
+      {
+        "acceptanceId": "acceptance-35738c6f63aa80a7d7dd0cb15c56de53067b8d8fbd5436b5294cfe25d99fb976",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "vps/agent.py"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-4fe46d928fd431289b9d9b57a8bc6288d1c70d579f0da4f8365721928896cad0",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "vps/agent.py"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-7246d5da80ad04010d95f86da2032c607b63e319f78080d3e8d504bc86ef59b8",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "vps/agent.py",
+          "vps/test_agent_report_batches.py"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-740e191d1fa816e00e1c395bd32b7b9e00ab315a9fe1dc4950599df03b544c1a",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "vps/agent.py"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-76a67b72eaf91defd288b39323e05c95e5be0633afa3337ba019ab2faf6f9cf5",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "vps/agent.py",
+          "vps/test_agent_report_batches.py"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-77ba495f835e8811fb05f459e282a9bde3d42b94239fdc949f9d8eaa27758dfb",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "vps/agent.py",
+          "vps/test_agent_report_batches.py"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-a3eb2efd8edc7a7bf04a07be3ec688a780e9b4ae73e3b73d181f6039332c99ab",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "vps/agent.py"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-a78d9273a5b41053906c11c99f3f6ece85b2366c64653053dc3fc627934116f0",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "vps/agent.py"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-b5e842259cc8988e109808ae14308c76afa3e3d8582d989bac40feea828b6dd2",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "vps/agent.py"
+        ],
+        "skippedReason": null
+      },
+      {
+        "acceptanceId": "acceptance-c9c7bd4924f52ee8b99a7a604622030db7b496a68d1250ccb8f3fa7e323f6c80",
+        "kind": "brief-example",
+        "source": "brief.md",
+        "evidenceRefs": [
+          "vps/agent.py",
+          "vps/test_agent_report_batches.py"
+        ],
+        "skippedReason": null
+      }
+    ],
+    "traceHash": "580666c3b2d747dd1a9d6452512a729031e92a9b9971dcc3ca3f00833ca72b96"
+  },
+  "partialAllowanceRef": null,
+  "partialAllowanceHash": null,
+  "receiptRef": null,
+  "createdAt": "2026-07-24T14:07:24.548Z",
+  "envelopeHash": "f3f381f7b50d08ff176a1e394d0c3bf59511b52c7def995173ad5bacd645c2b5"
+}

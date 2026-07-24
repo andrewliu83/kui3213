@@ -1,0 +1,22 @@
+schema: comet.native.v3
+minimum_runtime_version: 3
+revision: 5
+name: reduce-agent-http-when-ws
+language: zh-CN
+phase: archive
+brief: brief.md
+approval: implicit
+approved_contract_hash: 12d1afb51fe7062eaaa24e962d72a5c0e5967ae693f9c33dbb7228db8e85b708
+spec_changes:
+  - capability: agent-http-ws-fallback
+    operation: create
+    source: specs/agent-http-ws-fallback/spec.md
+    base_hash: null
+verification_result: pass
+verification_report: verification.md
+implementation_scope: runtime/evidence/scopes/0c61c9bec6b10137a98261969a0c061092f9b7631ae29b0b83e9c89f72256e0f.json
+verification_evidence: runtime/evidence/verifications/f3f381f7b50d08ff176a1e394d0c3bf59511b52c7def995173ad5bacd645c2b5.json
+partial_allowance: null
+archived: true
+created_at: 2026-07-24
+run_id: 104f4fbb-6029-49cb-8b0b-6a68af1a5926
