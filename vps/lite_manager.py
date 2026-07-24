@@ -55,9 +55,12 @@ realtime_channel = None
 config_wakeup = threading.Event()
 heartbeat_wakeup = threading.Event()
 last_http_report = 0
-# Persist a regular HTTP snapshot even while realtime is connected. This keeps
-# the dashboard usable when a Durable Object websocket reconnects or is stale.
-REALTIME_HTTP_INTERVAL = 60
+# When WS is healthy, HTTP report is a slow C2 persistence fallback.
+# Live residential status stays on WebSocket (same idea as core agent).
+REALTIME_HTTP_INTERVAL = 180
+# When WS is healthy, config is event-driven (config.refresh). Periodic
+# HTTP is only a long-interval safety net, not a 60s poll.
+REALTIME_CONFIG_HTTP_INTERVAL = 600
 REALTIME_STATUS_ACTIVE_INTERVAL = 5
 REALTIME_STATUS_IDLE_INTERVAL = 30
 realtime_status_interval = REALTIME_STATUS_ACTIVE_INTERVAL
@@ -302,7 +305,11 @@ def update_config_loop():
             print(f"[cfg] 拉取配置失败: {e}", flush=True)
             if realtime_channel and realtime_channel.connected:
                 realtime_channel.send({"success": False, "error": str(e)[:500], "applied_at": int(time.time() * 1000)}, "config.result")
-        config_wakeup.wait(timeout=REALTIME_HTTP_INTERVAL if realtime_channel and realtime_channel.connected else 300)
+        if realtime_channel and realtime_channel.connected:
+            config_interval = REALTIME_CONFIG_HTTP_INTERVAL
+        else:
+            config_interval = 300
+        config_wakeup.wait(timeout=config_interval)
 
 def c2_heartbeat_loop():
     global public_ip, PROXY_PORT, tun_main, tun_backup, last_http_report

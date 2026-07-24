@@ -1,0 +1,39 @@
+{
+  "schema": "comet.native.implementation-scope.v2",
+  "contractHash": "913751ac83c0be2c3cfa04d43d19afdea09ad0bfc915e91797685b24e9c3117d",
+  "baselineProjectionRef": "runtime/evidence/snapshots/2d94103c964cdf4cff10f40ba6b3b518f7ec7a09d129adf6f8236027a3220df9.json",
+  "baselineProjectionHash": "2d94103c964cdf4cff10f40ba6b3b518f7ec7a09d129adf6f8236027a3220df9",
+  "currentProjectionRef": "runtime/evidence/snapshots/21e7b4ef6ca73df6e73aca14a4c1e65796462044a761b97a328480f51b797a71.json",
+  "currentProjectionHash": "21e7b4ef6ca73df6e73aca14a4c1e65796462044a761b97a328480f51b797a71",
+  "complete": true,
+  "declaredArtifacts": [
+    {
+      "path": "vps/lite_manager.py",
+      "kind": "file"
+    }
+  ],
+  "changes": [
+    {
+      "path": "vps/lite_manager.py",
+      "kind": "modified",
+      "before": {
+        "hash": "eeef808ac25220e75d49d6689775b8218e79352c323ddc751291a08af6f001de",
+        "size": 41784
+      },
+      "after": {
+        "hash": "987d3efd88afa8740157fcf514da906f7f0b7c2c55b91a16ebbb40e8bac2bb45",
+        "size": 42036
+      },
+      "attributedTo": [
+        {
+          "path": "vps/lite_manager.py",
+          "kind": "file"
+        }
+      ]
+    }
+  ],
+  "unattributed": [],
+  "unresolvedScopes": [],
+  "noCodeReason": null,
+  "scopeHash": "c042e65b5f109b149cd7615bcc1ea1e1f12deb71ea91b5e2fd240125713d49b5"
+}
