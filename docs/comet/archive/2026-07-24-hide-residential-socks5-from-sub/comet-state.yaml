@@ -1,0 +1,22 @@
+schema: comet.native.v3
+minimum_runtime_version: 3
+revision: 5
+name: hide-residential-socks5-from-sub
+language: zh-CN
+phase: archive
+brief: brief.md
+approval: implicit
+approved_contract_hash: 672265a6da1fcde398cb9a3d6101705034b48c8d5c2c3ded217cdb059a742e1f
+spec_changes:
+  - capability: subscription-export
+    operation: create
+    source: specs/subscription-export/spec.md
+    base_hash: null
+verification_result: pass
+verification_report: verification.md
+implementation_scope: runtime/evidence/scopes/59ddc25c3e03cb2fb1b47436d0e064c980c2459bec9533a97186273b84e39f5e.json
+verification_evidence: runtime/evidence/verifications/f596026a0c36277e1751530389d65c604179f1541972440e87db3e49e316d84d.json
+partial_allowance: null
+archived: true
+created_at: 2026-07-24
+run_id: d2bf63d4-4f85-4ce6-aa5b-c415949f71a4

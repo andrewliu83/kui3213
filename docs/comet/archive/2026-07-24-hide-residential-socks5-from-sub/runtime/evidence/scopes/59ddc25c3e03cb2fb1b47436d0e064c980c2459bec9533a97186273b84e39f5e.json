@@ -1,0 +1,39 @@
+{
+  "schema": "comet.native.implementation-scope.v2",
+  "contractHash": "672265a6da1fcde398cb9a3d6101705034b48c8d5c2c3ded217cdb059a742e1f",
+  "baselineProjectionRef": "runtime/evidence/snapshots/273ea201ad19fd0ad0d1012da76f3535edd8f7918a136c90201cfd59d80168c5.json",
+  "baselineProjectionHash": "273ea201ad19fd0ad0d1012da76f3535edd8f7918a136c90201cfd59d80168c5",
+  "currentProjectionRef": "runtime/evidence/snapshots/8c5ba98f7753b39f4b3cf29d46ea2194c7783cb14a9de2328cddf99ebc4cb8d2.json",
+  "currentProjectionHash": "8c5ba98f7753b39f4b3cf29d46ea2194c7783cb14a9de2328cddf99ebc4cb8d2",
+  "complete": true,
+  "declaredArtifacts": [
+    {
+      "path": "functions/api/[[path]].js",
+      "kind": "file"
+    }
+  ],
+  "changes": [
+    {
+      "path": "functions/api/[[path]].js",
+      "kind": "modified",
+      "before": {
+        "hash": "f36e45d1debe8cee0eb5803486c712867e2502864e0d78fe8ddfd1e813085b25",
+        "size": 179394
+      },
+      "after": {
+        "hash": "c913339baf62094f960462cddbed1eb9f2d6accd8d7905ce13b4aec11e39d81e",
+        "size": 177600
+      },
+      "attributedTo": [
+        {
+          "path": "functions/api/[[path]].js",
+          "kind": "file"
+        }
+      ]
+    }
+  ],
+  "unattributed": [],
+  "unresolvedScopes": [],
+  "noCodeReason": null,
+  "scopeHash": "59ddc25c3e03cb2fb1b47436d0e064c980c2459bec9533a97186273b84e39f5e"
+}
